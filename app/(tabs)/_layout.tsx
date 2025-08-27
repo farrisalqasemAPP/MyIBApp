@@ -1,9 +1,9 @@
 import { Tabs } from 'expo-router';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import React from 'react';
 import { Platform } from 'react-native';
 
 import { HapticTab } from '@/components/HapticTab';
-import { IconSymbol } from '@/components/ui/IconSymbol';
 import TabBarBackground from '@/components/ui/TabBarBackground';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -27,17 +27,39 @@ export default function TabLayout() {
         }),
       }}>
       <Tabs.Screen
-        name="index"
+        name="notes"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: 'Notes',
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons size={28} name="notes" color={color} />
+          ),
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="schedule"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'Schedule',
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons size={28} name="schedule" color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="tutor"
+        options={{
+          title: 'Tutor',
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons size={28} name="school" color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="curriculum"
+        options={{
+          title: 'Curriculum',
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons size={28} name="menu-book" color={color} />
+          ),
         }}
       />
     </Tabs>

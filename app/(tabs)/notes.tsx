@@ -11,6 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
+// eslint-disable-next-line import/no-unresolved
 import { LinearGradient } from 'expo-linear-gradient';
 
 type Note = {
@@ -26,16 +27,32 @@ type Subject = {
   title: string;
   icon: keyof typeof Ionicons.glyphMap;
   notes: Note[];
+  color: string;
 };
 
+const colorOptions = [
+  '#3b2e7e',
+  '#6a0dad',
+  '#1a1a40',
+  '#2e1065',
+  '#007bff',
+  '#28a745',
+  '#dc3545',
+  '#ffc107',
+  '#4caf50',
+  '#2196f3',
+  '#f44336',
+  '#ffeb3b',
+];
+
 const initialSubjects: Subject[] = [
-  { key: 'english', title: 'English', icon: 'book', notes: [] },
-  { key: 'arabic', title: 'Arabic', icon: 'globe-outline', notes: [] },
-  { key: 'math', title: 'Math', icon: 'calculator', notes: [] },
-  { key: 'physics', title: 'Physics', icon: 'planet', notes: [] },
-  { key: 'biology', title: 'Biology', icon: 'leaf', notes: [] },
-  { key: 'business', title: 'Business', icon: 'briefcase', notes: [] },
-  { key: 'social', title: 'Social Studies', icon: 'people', notes: [] },
+  { key: 'english', title: 'English', icon: 'book', notes: [], color: colorOptions[0] },
+  { key: 'arabic', title: 'Arabic', icon: 'globe-outline', notes: [], color: colorOptions[1] },
+  { key: 'math', title: 'Math', icon: 'calculator', notes: [], color: colorOptions[2] },
+  { key: 'physics', title: 'Physics', icon: 'planet', notes: [], color: colorOptions[3] },
+  { key: 'biology', title: 'Biology', icon: 'leaf', notes: [], color: colorOptions[4] },
+  { key: 'business', title: 'Business', icon: 'briefcase', notes: [], color: colorOptions[5] },
+  { key: 'social', title: 'Social Studies', icon: 'people', notes: [], color: colorOptions[6] },
 ];
 
 export default function NotesScreen() {
@@ -43,7 +60,6 @@ export default function NotesScreen() {
   const [active, setActive] = useState<Subject | null>(null);
   const [noteModalVisible, setNoteModalVisible] = useState(false);
   const [currentNote, setCurrentNote] = useState<Note | null>(null);
-  const [sectionColor, setSectionColor] = useState('#3b2e7e');
 
   const openSubject = (subject: Subject) => setActive(subject);
   const closeSubject = () => setActive(null);
@@ -55,7 +71,7 @@ export default function NotesScreen() {
       setCurrentNote({
         id: Date.now().toString(),
         text: '',
-        color: sectionColor,
+        color: active?.color || colorOptions[0],
         date: new Date().toLocaleDateString(),
         image: undefined,
       });
@@ -111,6 +127,7 @@ export default function NotesScreen() {
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
       quality: 1,
     });
     if (!result.canceled && currentNote) {
@@ -118,44 +135,22 @@ export default function NotesScreen() {
     }
   };
 
-  const colorOptions = [
-    '#3b2e7e',
-    '#6a0dad',
-    '#1a1a40',
-    '#2e1065',
-    '#007bff',
-    '#28a745',
-    '#dc3545',
-    '#ffc107',
-    '#4caf50',
-    '#2196f3',
-    '#f44336',
-    '#ffeb3b',
-  ];
+  const changeSubjectColor = (color: string) => {
+    if (!active) return;
+    setSubjects(prev => prev.map(s => (s.key === active.key ? { ...s, color } : s)));
+    setActive(prev => (prev && prev.key === active.key ? { ...prev, color } : prev));
+  };
 
   return (
     <LinearGradient
       colors={['#0d0d3d', '#1a1a40', '#3b2e7e', '#6a0dad']}
       style={styles.container}
     >
-      <View style={styles.sectionColorRow}>
-        {colorOptions.map(c => (
-          <TouchableOpacity
-            key={c}
-            style={[
-              styles.colorSwatch,
-              { backgroundColor: c },
-              sectionColor === c && styles.selectedSwatch,
-            ]}
-            onPress={() => setSectionColor(c)}
-          />
-        ))}
-      </View>
       <ScrollView contentContainerStyle={styles.grid}>
         {subjects.map(subject => (
           <TouchableOpacity
             key={subject.key}
-            style={[styles.box, { backgroundColor: sectionColor }]}
+            style={[styles.box, { backgroundColor: subject.color }]}
             onPress={() => openSubject(subject)}
           >
             <Ionicons name={subject.icon} size={32} color="#dcd6f7" />
@@ -170,16 +165,33 @@ export default function NotesScreen() {
       <Modal visible={!!active} animationType="slide">
         {active && (
           <View style={styles.modalContainer}>
-            <View style={[styles.modalHeader, { backgroundColor: sectionColor }]}>
+            <View style={[styles.modalHeader, { backgroundColor: active.color }]}> 
               <Ionicons name={active.icon} size={28} color="#dcd6f7" />
               <Text style={styles.modalTitle}>{active.title}</Text>
             </View>
             <ScrollView contentContainerStyle={styles.modalContent}>
+              <View style={styles.colorRow}>
+                {colorOptions.map(c => (
+                  <TouchableOpacity
+                    key={c}
+                    style={[
+                      styles.colorSwatch,
+                      { backgroundColor: c },
+                      active.color === c && styles.selectedSwatch,
+                    ]}
+                    onPress={() => changeSubjectColor(c)}
+                  />
+                ))}
+              </View>
               {active.notes.map(note => (
                 <View key={note.id} style={[styles.noteCard, { backgroundColor: note.color }]}>
                   <TouchableOpacity style={styles.noteBody} onPress={() => openNote(note)}>
                     {note.image && (
-                      <Image source={{ uri: note.image }} style={styles.noteImage} />
+                      <Image
+                        source={{ uri: note.image }}
+                        style={styles.noteImage}
+                        contentFit="contain"
+                      />
                     )}
                     <Text style={styles.noteDate}>{note.date}</Text>
                     <Text style={styles.noteText} numberOfLines={3}>
@@ -220,7 +232,11 @@ export default function NotesScreen() {
                 onChangeText={text => setCurrentNote({ ...currentNote, text })}
               />
               {currentNote.image && (
-                <Image source={{ uri: currentNote.image }} style={styles.noteImage} />
+                <Image
+                  source={{ uri: currentNote.image }}
+                  style={styles.noteImage}
+                  contentFit="contain"
+                />
               )}
               <TouchableOpacity style={styles.imageButton} onPress={pickImage}>
                 <Ionicons name="image" size={20} color="#dcd6f7" />
@@ -277,12 +293,6 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     paddingTop: 40,
-  },
-  sectionColorRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    marginBottom: 16,
   },
   grid: {
     flexDirection: 'row',

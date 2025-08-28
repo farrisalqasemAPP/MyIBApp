@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -19,7 +19,7 @@ type Note = {
   text: string;
   color: string;
   date: string;
-  image?: string;
+  images: string[];
 };
 
 type Subject = {
@@ -60,28 +60,41 @@ export default function NotesScreen() {
   const [active, setActive] = useState<Subject | null>(null);
   const [noteModalVisible, setNoteModalVisible] = useState(false);
   const [currentNote, setCurrentNote] = useState<Note | null>(null);
+  const [showSubjectColors, setShowSubjectColors] = useState(false);
+  const [showNoteColors, setShowNoteColors] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
+  const styles = useMemo(() => createStyles(darkMode), [darkMode]);
+  const iconColor = darkMode ? '#dcd6f7' : '#000';
 
-  const openSubject = (subject: Subject) => setActive(subject);
-  const closeSubject = () => setActive(null);
+  const openSubject = (subject: Subject) => {
+    setActive(subject);
+    setShowSubjectColors(false);
+  };
+  const closeSubject = () => {
+    setActive(null);
+    setShowSubjectColors(false);
+  };
 
   const openNote = (note?: Note) => {
     if (note) {
-      setCurrentNote(note);
+      setCurrentNote({ ...note, images: note.images || [] });
     } else {
       setCurrentNote({
         id: Date.now().toString(),
         text: '',
         color: active?.color || colorOptions[0],
         date: new Date().toLocaleDateString(),
-        image: undefined,
+        images: [],
       });
     }
+    setShowNoteColors(false);
     setNoteModalVisible(true);
   };
 
   const closeNote = () => {
     setNoteModalVisible(false);
     setCurrentNote(null);
+    setShowNoteColors(false);
   };
 
   const saveNote = (note: Note) => {
@@ -131,7 +144,10 @@ export default function NotesScreen() {
       quality: 1,
     });
     if (!result.canceled && currentNote) {
-      setCurrentNote({ ...currentNote, image: result.assets[0].uri });
+      setCurrentNote({
+        ...currentNote,
+        images: [...(currentNote.images || []), result.assets[0].uri],
+      });
     }
   };
 
@@ -143,9 +159,14 @@ export default function NotesScreen() {
 
   return (
     <LinearGradient
-      colors={['#0d0d3d', '#1a1a40', '#3b2e7e', '#6a0dad']}
+      colors={
+        darkMode
+          ? ['#0d0d3d', '#1a1a40', '#3b2e7e', '#6a0dad']
+          : ['#ffffff', '#e0e0e0']
+      }
       style={styles.container}
     >
+      <Text style={styles.title}>NOTES</Text>
       <ScrollView contentContainerStyle={styles.grid}>
         {subjects.map(subject => (
           <TouchableOpacity
@@ -153,7 +174,7 @@ export default function NotesScreen() {
             style={[styles.box, { backgroundColor: subject.color }]}
             onPress={() => openSubject(subject)}
           >
-            <Ionicons name={subject.icon} size={32} color="#dcd6f7" />
+            <Ionicons name={subject.icon} size={32} color={iconColor} />
             <Text style={styles.boxTitle}>{subject.title}</Text>
             {subject.notes.length > 0 && (
               <Text style={styles.boxNote}>{subject.notes.length} notes</Text>
@@ -161,53 +182,84 @@ export default function NotesScreen() {
           </TouchableOpacity>
         ))}
       </ScrollView>
+      <TouchableOpacity
+        style={styles.themeToggle}
+        onPress={() => setDarkMode(!darkMode)}
+      >
+        <Ionicons
+          name={darkMode ? 'moon' : 'sunny'}
+          size={24}
+          color={iconColor}
+        />
+      </TouchableOpacity>
 
       <Modal visible={!!active} animationType="slide">
         {active && (
           <View style={styles.modalContainer}>
-            <View style={[styles.modalHeader, { backgroundColor: active.color }]}> 
-              <Ionicons name={active.icon} size={28} color="#dcd6f7" />
+            <View style={[styles.modalHeader, { backgroundColor: active.color }]}>
+              <Ionicons name={active.icon} size={28} color={iconColor} />
               <Text style={styles.modalTitle}>{active.title}</Text>
             </View>
             <ScrollView contentContainerStyle={styles.modalContent}>
-              <View style={styles.colorRow}>
-                {colorOptions.map(c => (
-                  <TouchableOpacity
-                    key={c}
-                    style={[
-                      styles.colorSwatch,
-                      { backgroundColor: c },
-                      active.color === c && styles.selectedSwatch,
-                    ]}
-                    onPress={() => changeSubjectColor(c)}
-                  />
-                ))}
-              </View>
+              <TouchableOpacity
+                style={styles.colorToggle}
+                onPress={() => setShowSubjectColors(!showSubjectColors)}
+              >
+                <Ionicons name="color-palette" size={20} color={iconColor} />
+                <Text style={styles.addButtonText}>Colors</Text>
+              </TouchableOpacity>
+              {showSubjectColors && (
+                <View style={styles.colorRow}>
+                  {colorOptions.map(c => (
+                    <TouchableOpacity
+                      key={c}
+                      style={[
+                        styles.colorSwatch,
+                        { backgroundColor: c },
+                        active.color === c && styles.selectedSwatch,
+                      ]}
+                      onPress={() => changeSubjectColor(c)}
+                    />
+                  ))}
+                </View>
+              )}
               {active.notes.map(note => (
-                <View key={note.id} style={[styles.noteCard, { backgroundColor: note.color }]}>
+                <View
+                  key={note.id}
+                  style={[styles.noteCard, { backgroundColor: note.color }]}
+                >
                   <TouchableOpacity style={styles.noteBody} onPress={() => openNote(note)}>
-                    {note.image && (
-                      <Image
-                        source={{ uri: note.image }}
-                        style={styles.noteImage}
-                        contentFit="contain"
-                      />
-                    )}
                     <Text style={styles.noteDate}>{note.date}</Text>
                     <Text style={styles.noteText} numberOfLines={3}>
                       {note.text}
                     </Text>
+                    {note.images.length > 0 && (
+                      note.images.length <= 2 ? (
+                        note.images.map((img, idx) => (
+                          <Image
+                            key={img + idx}
+                            source={{ uri: img }}
+                            style={styles.noteImage}
+                            contentFit="contain"
+                          />
+                        ))
+                      ) : (
+                        <View style={styles.imageIconContainer}>
+                          <Ionicons name="images" size={20} color={iconColor} />
+                        </View>
+                      )
+                    )}
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.deleteIcon}
                     onPress={() => deleteNote(note.id)}
                   >
-                    <Ionicons name="trash" size={20} color="#dcd6f7" />
+                    <Ionicons name="trash" size={20} color={iconColor} />
                   </TouchableOpacity>
                 </View>
               ))}
               <TouchableOpacity style={styles.addButton} onPress={() => openNote()}>
-                <Ionicons name="add" size={20} color="#dcd6f7" />
+                <Ionicons name="add" size={20} color={iconColor} />
                 <Text style={styles.addButtonText}>Add Note</Text>
               </TouchableOpacity>
             </ScrollView>
@@ -231,30 +283,40 @@ export default function NotesScreen() {
                 value={currentNote.text}
                 onChangeText={text => setCurrentNote({ ...currentNote, text })}
               />
-              {currentNote.image && (
+              {currentNote.images.map((img, idx) => (
                 <Image
-                  source={{ uri: currentNote.image }}
+                  key={img + idx}
+                  source={{ uri: img }}
                   style={styles.noteImage}
                   contentFit="contain"
                 />
-              )}
+              ))}
               <TouchableOpacity style={styles.imageButton} onPress={pickImage}>
-                <Ionicons name="image" size={20} color="#dcd6f7" />
+                <Ionicons name="image" size={20} color={iconColor} />
                 <Text style={styles.addButtonText}>Add Image</Text>
               </TouchableOpacity>
-              <View style={styles.colorRow}>
-                {colorOptions.map(c => (
-                  <TouchableOpacity
-                    key={c}
-                    style={[
-                      styles.colorSwatch,
-                      { backgroundColor: c },
-                      currentNote.color === c && styles.selectedSwatch,
-                    ]}
-                    onPress={() => setCurrentNote({ ...currentNote, color: c })}
-                  />
-                ))}
-              </View>
+              <TouchableOpacity
+                style={styles.colorToggle}
+                onPress={() => setShowNoteColors(!showNoteColors)}
+              >
+                <Ionicons name="color-palette" size={20} color={iconColor} />
+                <Text style={styles.addButtonText}>Colors</Text>
+              </TouchableOpacity>
+              {showNoteColors && (
+                <View style={styles.colorRow}>
+                  {colorOptions.map(c => (
+                    <TouchableOpacity
+                      key={c}
+                      style={[
+                        styles.colorSwatch,
+                        { backgroundColor: c },
+                        currentNote.color === c && styles.selectedSwatch,
+                      ]}
+                      onPress={() => setCurrentNote({ ...currentNote, color: c })}
+                    />
+                  ))}
+                </View>
+              )}
             </ScrollView>
             <View style={styles.noteModalButtons}>
               <TouchableOpacity
@@ -288,163 +350,204 @@ export default function NotesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-    paddingTop: 40,
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  box: {
-    width: '48%',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    alignItems: 'center',
-  },
-  boxTitle: {
-    marginTop: 8,
-    color: '#dcd6f7',
-    fontSize: 16,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  boxNote: {
-    marginTop: 8,
-    color: '#e0e0e0',
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: '#0d0d3d',
-  },
-  modalHeader: {
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  modalTitle: {
-    marginLeft: 8,
-    color: '#dcd6f7',
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  modalContent: {
-    padding: 16,
-  },
-  noteCard: {
-    borderRadius: 8,
-    marginBottom: 12,
-    padding: 12,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  noteBody: {
-    flex: 1,
-    alignItems: 'flex-start',
-  },
-  noteDate: {
-    color: '#dcd6f7',
-    marginBottom: 4,
-    fontSize: 12,
-    textAlign: 'left',
-  },
-  noteText: {
-    color: '#e0e0e0',
-    fontSize: 14,
-    textAlign: 'left',
-  },
-  deleteIcon: {
-    marginLeft: 8,
-    justifyContent: 'center',
-  },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  imageButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  addButtonText: {
-    marginLeft: 8,
-    color: '#dcd6f7',
-  },
-  closeButton: {
-    backgroundColor: '#2e1065',
-    padding: 16,
-    alignItems: 'center',
-  },
-  closeButtonText: {
-    color: '#dcd6f7',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  noteModalContainer: {
-    flex: 1,
-    backgroundColor: '#0d0d3d',
-    paddingTop: 32,
-  },
-  input: {
-    minHeight: 120,
-    borderColor: '#2e1065',
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-    color: '#dcd6f7',
-    textAlignVertical: 'top',
-  },
-  colorRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 16,
-  },
-  colorSwatch: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  selectedSwatch: {
-    borderWidth: 2,
-    borderColor: '#fff',
-  },
-  noteImage: {
-    width: '100%',
-    height: 150,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  noteModalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    padding: 16,
-  },
-  saveButton: {
-    backgroundColor: '#2e1065',
-    padding: 12,
-    borderRadius: 8,
-  },
-  deleteButton: {
-    backgroundColor: '#dc3545',
-    padding: 12,
-    borderRadius: 8,
-  },
-  cancelButton: {
-    backgroundColor: '#6c757d',
-    padding: 12,
-    borderRadius: 8,
-  },
-  saveButtonText: {
-    color: '#dcd6f7',
-  },
-});
+const createStyles = (dark: boolean) => {
+  const textColor = dark ? '#dcd6f7' : '#000';
+  const secondaryText = dark ? '#e0e0e0' : '#333';
+  const background = dark ? '#0d0d3d' : '#fff';
+  const toggleBg = dark ? '#1a1a40' : '#e0e0e0';
+  const inputBorder = dark ? '#2e1065' : '#ccc';
+  const selectedBorder = dark ? '#fff' : '#000';
+  const cancelBg = dark ? '#6c757d' : '#ccc';
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: 16,
+      paddingTop: 40,
+    },
+    title: {
+      color: textColor,
+      fontSize: 24,
+      fontWeight: 'bold',
+      textAlign: 'center',
+      marginBottom: 16,
+    },
+    grid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'space-between',
+    },
+    box: {
+      width: '48%',
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 12,
+      alignItems: 'center',
+    },
+    boxTitle: {
+      marginTop: 8,
+      color: textColor,
+      fontSize: 16,
+      fontWeight: 'bold',
+      textAlign: 'center',
+    },
+    boxNote: {
+      marginTop: 8,
+      color: secondaryText,
+      fontSize: 14,
+      textAlign: 'center',
+    },
+    modalContainer: {
+      flex: 1,
+      backgroundColor: background,
+    },
+    modalHeader: {
+      padding: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    modalTitle: {
+      marginLeft: 8,
+      color: textColor,
+      fontSize: 20,
+      fontWeight: '600',
+    },
+    modalContent: {
+      padding: 16,
+    },
+    noteCard: {
+      borderRadius: 8,
+      marginBottom: 12,
+      padding: 12,
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+    },
+    noteBody: {
+      flex: 1,
+      alignItems: 'flex-start',
+    },
+    noteDate: {
+      color: textColor,
+      marginBottom: 4,
+      fontSize: 12,
+      textAlign: 'left',
+    },
+    noteText: {
+      color: secondaryText,
+      fontSize: 14,
+      textAlign: 'left',
+    },
+    deleteIcon: {
+      marginLeft: 8,
+      justifyContent: 'center',
+    },
+    addButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 16,
+    },
+    imageButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 16,
+    },
+    addButtonText: {
+      marginLeft: 8,
+      color: textColor,
+    },
+    closeButton: {
+      backgroundColor: '#2e1065',
+      padding: 16,
+      alignItems: 'center',
+    },
+    closeButtonText: {
+      color: textColor,
+      fontSize: 16,
+      fontWeight: 'bold',
+    },
+    noteModalContainer: {
+      flex: 1,
+      backgroundColor: background,
+      paddingTop: 32,
+    },
+    input: {
+      minHeight: 120,
+      borderColor: inputBorder,
+      borderWidth: 1,
+      borderRadius: 8,
+      padding: 12,
+      color: textColor,
+      textAlignVertical: 'top',
+    },
+    colorRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      marginTop: 16,
+    },
+    colorSwatch: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      marginRight: 8,
+      marginBottom: 8,
+    },
+    selectedSwatch: {
+      borderWidth: 2,
+      borderColor: selectedBorder,
+    },
+    noteImage: {
+      width: '100%',
+      height: 150,
+      borderRadius: 8,
+      marginBottom: 8,
+    },
+    noteModalButtons: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      padding: 16,
+    },
+    saveButton: {
+      backgroundColor: '#2e1065',
+      padding: 12,
+      borderRadius: 8,
+    },
+    deleteButton: {
+      backgroundColor: '#dc3545',
+      padding: 12,
+      borderRadius: 8,
+    },
+    cancelButton: {
+      backgroundColor: cancelBg,
+      padding: 12,
+      borderRadius: 8,
+    },
+    saveButtonText: {
+      color: textColor,
+    },
+    themeToggle: {
+      position: 'absolute',
+      bottom: 20,
+      right: 20,
+      width: 50,
+      height: 50,
+      borderRadius: 25,
+      backgroundColor: toggleBg,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    colorToggle: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 16,
+    },
+    imageIconContainer: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      backgroundColor: toggleBg,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginTop: 8,
+    },
+  });
+};
 

@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Modal,
   TextInput,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -16,10 +17,15 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 type Note = {
   id: string;
+  title: string;
   text: string;
   color: string;
   date: string;
   images: string[];
+  bold: boolean;
+  italic: boolean;
+  underline: boolean;
+  highlight: boolean;
 };
 
 type Subject = {
@@ -63,8 +69,25 @@ export default function NotesScreen() {
   const [showSubjectColors, setShowSubjectColors] = useState(false);
   const [showNoteColors, setShowNoteColors] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
   const styles = useMemo(() => createStyles(darkMode), [darkMode]);
   const iconColor = darkMode ? '#dcd6f7' : '#000';
+
+  const filteredNotes = useMemo(
+    () =>
+      subjects.flatMap(s =>
+        s.notes
+          .filter(n => {
+            const q = searchQuery.toLowerCase();
+            return (
+              n.title.toLowerCase().includes(q) ||
+              n.text.toLowerCase().includes(q)
+            );
+          })
+          .map(n => ({ subject: s, note: n })),
+      ),
+    [subjects, searchQuery],
+  );
 
   const openSubject = (subject: Subject) => {
     setActive(subject);
@@ -77,14 +100,26 @@ export default function NotesScreen() {
 
   const openNote = (note?: Note) => {
     if (note) {
-      setCurrentNote({ ...note, images: note.images || [] });
+      setCurrentNote({
+        ...note,
+        images: note.images || [],
+        bold: note.bold || false,
+        italic: note.italic || false,
+        underline: note.underline || false,
+        highlight: note.highlight || false,
+      });
     } else {
       setCurrentNote({
         id: Date.now().toString(),
+        title: '',
         text: '',
         color: active?.color || colorOptions[0],
         date: new Date().toLocaleDateString(),
         images: [],
+        bold: false,
+        italic: false,
+        underline: false,
+        highlight: false,
       });
     }
     setShowNoteColors(false);
@@ -137,6 +172,20 @@ export default function NotesScreen() {
     );
   };
 
+  const confirmDeleteNote = (id: string, onAfter?: () => void) => {
+    Alert.alert('Delete Note', 'Are you sure you want to delete this note?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          deleteNote(id);
+          onAfter?.();
+        },
+      },
+    ]);
+  };
+
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -175,21 +224,60 @@ export default function NotesScreen() {
       style={styles.container}
     >
       <Text style={styles.title}>NOTES</Text>
-      <ScrollView contentContainerStyle={styles.grid}>
-        {subjects.map(subject => (
-          <TouchableOpacity
-            key={subject.key}
-            style={[styles.box, { backgroundColor: subject.color }]}
-            onPress={() => openSubject(subject)}
-          >
-            <Ionicons name={subject.icon} size={32} color={iconColor} />
-            <Text style={styles.boxTitle}>{subject.title}</Text>
-            {subject.notes.length > 0 && (
-              <Text style={styles.boxNote}>{subject.notes.length} notes</Text>
-            )}
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      <TextInput
+        style={styles.searchInput}
+        placeholder="Search notes..."
+        placeholderTextColor="#999"
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+      />
+      {searchQuery ? (
+        <ScrollView contentContainerStyle={styles.searchResults}>
+          {filteredNotes.map(({ subject, note }) => (
+            <TouchableOpacity
+              key={note.id}
+              style={[styles.searchCard, { backgroundColor: note.color }]}
+              onPress={() => {
+                setActive(subject);
+                openNote(note);
+              }}
+            >
+              <Text style={styles.noteTitle}>{note.title}</Text>
+              <Text style={styles.noteDate}>
+                {note.date} - {subject.title}
+              </Text>
+              <Text
+                style={[
+                  styles.noteText,
+                  note.bold && styles.boldText,
+                  note.italic && styles.italicText,
+                  note.underline && styles.underlineText,
+                  note.highlight && styles.highlightText,
+                ]}
+                numberOfLines={3}
+              >
+                {note.text}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      ) : (
+        <ScrollView contentContainerStyle={styles.grid}>
+          {subjects.map(subject => (
+            <TouchableOpacity
+              key={subject.key}
+              style={[styles.box, { backgroundColor: subject.color }]}
+              onPress={() => openSubject(subject)}
+            >
+              <Ionicons name={subject.icon} size={32} color={iconColor} />
+              <Text style={styles.boxTitle}>{subject.title}</Text>
+              {subject.notes.length > 0 && (
+                <Text style={styles.boxNote}>{subject.notes.length} notes</Text>
+              )}
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
       <TouchableOpacity
         style={styles.themeToggle}
         onPress={() => setDarkMode(!darkMode)}
@@ -237,8 +325,18 @@ export default function NotesScreen() {
                   style={[styles.noteCard, { backgroundColor: note.color }]}
                 >
                   <TouchableOpacity style={styles.noteBody} onPress={() => openNote(note)}>
+                    <Text style={styles.noteTitle}>{note.title}</Text>
                     <Text style={styles.noteDate}>{note.date}</Text>
-                    <Text style={styles.noteText} numberOfLines={3}>
+                    <Text
+                      style={[
+                        styles.noteText,
+                        note.bold && styles.boldText,
+                        note.italic && styles.italicText,
+                        note.underline && styles.underlineText,
+                        note.highlight && styles.highlightText,
+                      ]}
+                      numberOfLines={3}
+                    >
                       {note.text}
                     </Text>
                     {note.images.length > 0 && (
@@ -257,7 +355,7 @@ export default function NotesScreen() {
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.deleteIcon}
-                    onPress={() => deleteNote(note.id)}
+                    onPress={() => confirmDeleteNote(note.id)}
                   >
                     <Ionicons name="trash" size={20} color={iconColor} />
                   </TouchableOpacity>
@@ -281,13 +379,82 @@ export default function NotesScreen() {
             <Text style={styles.noteDate}>{currentNote.date}</Text>
             <ScrollView contentContainerStyle={styles.modalContent}>
               <TextInput
-                style={styles.input}
+                style={styles.titleInput}
+                placeholder="Title"
+                placeholderTextColor="#999"
+                value={currentNote.title}
+                onChangeText={title => setCurrentNote({ ...currentNote, title })}
+              />
+              <TextInput
+                style={[
+                  styles.input,
+                  currentNote.bold && styles.boldText,
+                  currentNote.italic && styles.italicText,
+                  currentNote.underline && styles.underlineText,
+                  currentNote.highlight && styles.highlightText,
+                ]}
                 placeholder="Write your note..."
                 placeholderTextColor="#999"
                 multiline
                 value={currentNote.text}
                 onChangeText={text => setCurrentNote({ ...currentNote, text })}
               />
+              <View style={styles.formatBar}>
+                <TouchableOpacity
+                  style={[
+                    styles.formatButton,
+                    currentNote.bold && styles.activeFormat,
+                  ]}
+                  onPress={() =>
+                    setCurrentNote({ ...currentNote, bold: !currentNote.bold })
+                  }
+                >
+                  <Text style={{ fontWeight: 'bold', color: iconColor }}>B</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.formatButton,
+                    currentNote.italic && styles.activeFormat,
+                  ]}
+                  onPress={() =>
+                    setCurrentNote({ ...currentNote, italic: !currentNote.italic })
+                  }
+                >
+                  <Text style={{ fontStyle: 'italic', color: iconColor }}>I</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.formatButton,
+                    currentNote.underline && styles.activeFormat,
+                  ]}
+                  onPress={() =>
+                    setCurrentNote({
+                      ...currentNote,
+                      underline: !currentNote.underline,
+                    })
+                  }
+                >
+                  <Text
+                    style={{ textDecorationLine: 'underline', color: iconColor }}
+                  >
+                    U
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.formatButton,
+                    currentNote.highlight && styles.activeFormat,
+                  ]}
+                  onPress={() =>
+                    setCurrentNote({
+                      ...currentNote,
+                      highlight: !currentNote.highlight,
+                    })
+                  }
+                >
+                  <Ionicons name="color-fill" size={20} color={iconColor} />
+                </TouchableOpacity>
+              </View>
               {currentNote.images.map((img, idx) => (
                 <View key={img + idx} style={styles.imageContainer}>
                   <Image
@@ -343,10 +510,7 @@ export default function NotesScreen() {
               {active?.notes.some(n => n.id === currentNote.id) && (
                 <TouchableOpacity
                   style={styles.deleteButton}
-                  onPress={() => {
-                    deleteNote(currentNote.id);
-                    closeNote();
-                  }}
+                  onPress={() => confirmDeleteNote(currentNote.id, closeNote)}
                 >
                   <Text style={styles.saveButtonText}>Delete</Text>
                 </TouchableOpacity>
@@ -387,6 +551,17 @@ const createStyles = (dark: boolean) => {
       flexDirection: 'row',
       flexWrap: 'wrap',
       justifyContent: 'space-between',
+    },
+    searchInput: {
+      borderColor: inputBorder,
+      borderWidth: 1,
+      borderRadius: 8,
+      padding: 8,
+      color: textColor,
+      marginBottom: 16,
+    },
+    searchResults: {
+      paddingBottom: 16,
     },
     box: {
       width: '48%',
@@ -433,6 +608,11 @@ const createStyles = (dark: boolean) => {
       flexDirection: 'row',
       alignItems: 'flex-start',
     },
+    searchCard: {
+      borderRadius: 8,
+      marginBottom: 12,
+      padding: 12,
+    },
     noteBody: {
       flex: 1,
       alignItems: 'flex-start',
@@ -447,6 +627,13 @@ const createStyles = (dark: boolean) => {
       color: secondaryText,
       fontSize: 14,
       textAlign: 'left',
+    },
+    noteTitle: {
+      color: textColor,
+      fontSize: 16,
+      fontWeight: 'bold',
+      textAlign: 'left',
+      marginBottom: 4,
     },
     deleteIcon: {
       marginLeft: 8,
@@ -481,6 +668,14 @@ const createStyles = (dark: boolean) => {
       backgroundColor: background,
       paddingTop: 32,
     },
+    titleInput: {
+      borderColor: inputBorder,
+      borderWidth: 1,
+      borderRadius: 8,
+      padding: 8,
+      color: textColor,
+      marginBottom: 12,
+    },
     input: {
       minHeight: 120,
       borderColor: inputBorder,
@@ -490,6 +685,23 @@ const createStyles = (dark: boolean) => {
       color: textColor,
       textAlignVertical: 'top',
     },
+    formatBar: {
+      flexDirection: 'row',
+      marginTop: 8,
+    },
+    formatButton: {
+      padding: 8,
+      marginRight: 8,
+      borderRadius: 4,
+      backgroundColor: toggleBg,
+    },
+    activeFormat: {
+      backgroundColor: '#2e1065',
+    },
+    boldText: { fontWeight: 'bold' },
+    italicText: { fontStyle: 'italic' },
+    underlineText: { textDecorationLine: 'underline' },
+    highlightText: { backgroundColor: '#ffeb3b' },
     colorRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',

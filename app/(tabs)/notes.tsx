@@ -151,6 +151,14 @@ export default function NotesScreen() {
     }
   };
 
+  const removeImage = (index: number) => {
+    if (!currentNote) return;
+    setCurrentNote({
+      ...currentNote,
+      images: currentNote.images.filter((_, i) => i !== index),
+    });
+  };
+
   const changeSubjectColor = (color: string) => {
     if (!active) return;
     setSubjects(prev => prev.map(s => (s.key === active.key ? { ...s, color } : s)));
@@ -234,15 +242,12 @@ export default function NotesScreen() {
                       {note.text}
                     </Text>
                     {note.images.length > 0 && (
-                      note.images.length <= 2 ? (
-                        note.images.map((img, idx) => (
-                          <Image
-                            key={img + idx}
-                            source={{ uri: img }}
-                            style={styles.noteImage}
-                            contentFit="contain"
-                          />
-                        ))
+                      note.images.length === 1 ? (
+                        <Image
+                          source={{ uri: note.images[0] }}
+                          style={styles.noteImage}
+                          contentFit="contain"
+                        />
                       ) : (
                         <View style={styles.imageIconContainer}>
                           <Ionicons name="images" size={20} color={iconColor} />
@@ -284,12 +289,19 @@ export default function NotesScreen() {
                 onChangeText={text => setCurrentNote({ ...currentNote, text })}
               />
               {currentNote.images.map((img, idx) => (
-                <Image
-                  key={img + idx}
-                  source={{ uri: img }}
-                  style={styles.noteImage}
-                  contentFit="contain"
-                />
+                <View key={img + idx} style={styles.imageContainer}>
+                  <Image
+                    source={{ uri: img }}
+                    style={styles.noteImage}
+                    contentFit="contain"
+                  />
+                  <TouchableOpacity
+                    style={styles.removeImageButton}
+                    onPress={() => removeImage(idx)}
+                  >
+                    <Ionicons name="close-circle" size={20} color="#dc3545" />
+                  </TouchableOpacity>
+                </View>
               ))}
               <TouchableOpacity style={styles.imageButton} onPress={pickImage}>
                 <Ionicons name="image" size={20} color={iconColor} />
@@ -499,6 +511,19 @@ const createStyles = (dark: boolean) => {
       height: 150,
       borderRadius: 8,
       marginBottom: 8,
+    },
+    imageContainer: {
+      position: 'relative',
+      width: '100%',
+      marginBottom: 8,
+    },
+    removeImageButton: {
+      position: 'absolute',
+      top: 4,
+      right: 4,
+      backgroundColor: 'rgba(0,0,0,0.6)',
+      borderRadius: 12,
+      padding: 2,
     },
     noteModalButtons: {
       flexDirection: 'row',

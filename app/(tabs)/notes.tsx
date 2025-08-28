@@ -1,12 +1,24 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Modal, TextInput } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  View,
+  ScrollView,
+  TouchableOpacity,
+  Modal,
+  TextInput,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 
 type Note = {
   id: string;
   text: string;
   color: string;
   date: string;
+  image?: string;
 };
 
 type Subject = {
@@ -31,6 +43,7 @@ export default function NotesScreen() {
   const [active, setActive] = useState<Subject | null>(null);
   const [noteModalVisible, setNoteModalVisible] = useState(false);
   const [currentNote, setCurrentNote] = useState<Note | null>(null);
+  const [sectionColor, setSectionColor] = useState('#3b2e7e');
 
   const openSubject = (subject: Subject) => setActive(subject);
   const closeSubject = () => setActive(null);
@@ -42,8 +55,9 @@ export default function NotesScreen() {
       setCurrentNote({
         id: Date.now().toString(),
         text: '',
-        color: '#3b2e7e',
+        color: sectionColor,
         date: new Date().toLocaleDateString(),
+        image: undefined,
       });
     }
     setNoteModalVisible(true);
@@ -94,6 +108,16 @@ export default function NotesScreen() {
     );
   };
 
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 1,
+    });
+    if (!result.canceled && currentNote) {
+      setCurrentNote({ ...currentNote, image: result.assets[0].uri });
+    }
+  };
+
   const colorOptions = [
     '#3b2e7e',
     '#6a0dad',
@@ -110,12 +134,28 @@ export default function NotesScreen() {
   ];
 
   return (
-    <View style={styles.container}>
+    <LinearGradient
+      colors={['#0d0d3d', '#1a1a40', '#3b2e7e', '#6a0dad']}
+      style={styles.container}
+    >
+      <View style={styles.sectionColorRow}>
+        {colorOptions.map(c => (
+          <TouchableOpacity
+            key={c}
+            style={[
+              styles.colorSwatch,
+              { backgroundColor: c },
+              sectionColor === c && styles.selectedSwatch,
+            ]}
+            onPress={() => setSectionColor(c)}
+          />
+        ))}
+      </View>
       <ScrollView contentContainerStyle={styles.grid}>
         {subjects.map(subject => (
           <TouchableOpacity
             key={subject.key}
-            style={[styles.box, { backgroundColor: '#3b2e7e' }]}
+            style={[styles.box, { backgroundColor: sectionColor }]}
             onPress={() => openSubject(subject)}
           >
             <Ionicons name={subject.icon} size={32} color="#dcd6f7" />
@@ -130,7 +170,7 @@ export default function NotesScreen() {
       <Modal visible={!!active} animationType="slide">
         {active && (
           <View style={styles.modalContainer}>
-            <View style={[styles.modalHeader, { backgroundColor: '#3b2e7e' }]}>
+            <View style={[styles.modalHeader, { backgroundColor: sectionColor }]}>
               <Ionicons name={active.icon} size={28} color="#dcd6f7" />
               <Text style={styles.modalTitle}>{active.title}</Text>
             </View>
@@ -138,6 +178,9 @@ export default function NotesScreen() {
               {active.notes.map(note => (
                 <View key={note.id} style={[styles.noteCard, { backgroundColor: note.color }]}>
                   <TouchableOpacity style={styles.noteBody} onPress={() => openNote(note)}>
+                    {note.image && (
+                      <Image source={{ uri: note.image }} style={styles.noteImage} />
+                    )}
                     <Text style={styles.noteDate}>{note.date}</Text>
                     <Text style={styles.noteText} numberOfLines={3}>
                       {note.text}
@@ -176,6 +219,13 @@ export default function NotesScreen() {
                 value={currentNote.text}
                 onChangeText={text => setCurrentNote({ ...currentNote, text })}
               />
+              {currentNote.image && (
+                <Image source={{ uri: currentNote.image }} style={styles.noteImage} />
+              )}
+              <TouchableOpacity style={styles.imageButton} onPress={pickImage}>
+                <Ionicons name="image" size={20} color="#dcd6f7" />
+                <Text style={styles.addButtonText}>Add Image</Text>
+              </TouchableOpacity>
               <View style={styles.colorRow}>
                 {colorOptions.map(c => (
                   <TouchableOpacity
@@ -218,15 +268,21 @@ export default function NotesScreen() {
           </View>
         )}
       </Modal>
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0d0d3d',
     padding: 16,
+    paddingTop: 40,
+  },
+  sectionColorRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    marginBottom: 16,
   },
   grid: {
     flexDirection: 'row',
@@ -238,17 +294,20 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
+    alignItems: 'center',
   },
   boxTitle: {
     marginTop: 8,
     color: '#dcd6f7',
     fontSize: 16,
     fontWeight: 'bold',
+    textAlign: 'center',
   },
   boxNote: {
     marginTop: 8,
     color: '#e0e0e0',
     fontSize: 14,
+    textAlign: 'center',
   },
   modalContainer: {
     flex: 1,
@@ -273,24 +332,33 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     padding: 12,
     flexDirection: 'row',
+    alignItems: 'flex-start',
   },
   noteBody: {
     flex: 1,
+    alignItems: 'flex-start',
   },
   noteDate: {
     color: '#dcd6f7',
     marginBottom: 4,
     fontSize: 12,
+    textAlign: 'left',
   },
   noteText: {
     color: '#e0e0e0',
     fontSize: 14,
+    textAlign: 'left',
   },
   deleteIcon: {
     marginLeft: 8,
     justifyContent: 'center',
   },
   addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  imageButton: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 16,
@@ -338,6 +406,12 @@ const styles = StyleSheet.create({
   selectedSwatch: {
     borderWidth: 2,
     borderColor: '#fff',
+  },
+  noteImage: {
+    width: '100%',
+    height: 150,
+    borderRadius: 8,
+    marginBottom: 8,
   },
   noteModalButtons: {
     flexDirection: 'row',

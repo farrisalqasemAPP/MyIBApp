@@ -4,17 +4,18 @@
  */
 
 import { Colors } from '@/constants/Colors';
+import { useColorScheme } from './useColorScheme';
 
-// Return themed colors using only the dark palette.
+// Return themed colors based on the current color scheme.
 export function useThemeColor(
-  props: { dark?: string },
-  colorName: keyof typeof Colors.dark
+  props: { light?: string; dark?: string },
+  colorName: keyof typeof Colors.light & keyof typeof Colors.dark,
 ) {
-  const colorFromProps = props.dark;
+  const theme = useColorScheme();
+  const colorFromProps = props[theme];
 
   if (colorFromProps) {
     return colorFromProps;
-  } else {
-    return Colors.dark[colorName];
   }
+  return Colors[theme][colorName];
 }

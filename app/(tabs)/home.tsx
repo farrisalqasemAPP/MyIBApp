@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Modal,
   Switch,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -42,8 +43,9 @@ export default function HomeScreen() {
   const [activeCard, setActiveCard] = useState(0);
 
   const theme = isLightMode ? Colors.light : Colors.dark;
-  const styles = useMemo(() => createStyles(theme), [theme]);
-  const currentCard = cardData[activeCard];
+  const { width } = useWindowDimensions();
+  const scrollRef = useRef<ScrollView>(null);
+  const styles = useMemo(() => createStyles(theme, width), [theme, width]);
 
   return (
     <View style={styles.container}>
@@ -58,23 +60,45 @@ export default function HomeScreen() {
           <Text style={styles.headerTitle}>Clarity</Text>
         </View>
 
-        <View style={styles.card}>
-          <View style={styles.cardText}>
-            <Text style={styles.cardTitle}>{currentCard.title}</Text>
-            <Text style={styles.cardDescription}>{currentCard.description}</Text>
-            <TouchableOpacity style={styles.cardButton}>
-              <Text style={styles.cardButtonText}>Check Out</Text>
-            </TouchableOpacity>
-          </View>
-          <Ionicons name={currentCard.icon} size={72} color={theme.tint} />
-        </View>
+        <ScrollView
+          ref={scrollRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          style={styles.cardCarousel}
+          onMomentumScrollEnd={event => {
+            const index = Math.round(
+              event.nativeEvent.contentOffset.x / (width - 40),
+            );
+            setActiveCard(index);
+          }}
+        >
+          {cardData.map((card, index) => (
+            <View key={index} style={styles.card}>
+              <View style={styles.cardText}>
+                <Text style={styles.cardTitle}>{card.title}</Text>
+                <Text style={styles.cardDescription}>{card.description}</Text>
+                <TouchableOpacity style={styles.cardButton}>
+                  <Text style={styles.cardButtonText}>Check Out</Text>
+                </TouchableOpacity>
+              </View>
+              <Ionicons name={card.icon} size={72} color={theme.tint} />
+            </View>
+          ))}
+        </ScrollView>
 
         <View style={styles.dots}>
           {cardData.map((_, index) => (
             <TouchableOpacity
               key={index}
               style={[styles.dot, index === activeCard && styles.activeDot]}
-              onPress={() => setActiveCard(index)}
+              onPress={() => {
+                scrollRef.current?.scrollTo({
+                  x: index * (width - 40),
+                  animated: true,
+                });
+                setActiveCard(index);
+              }}
             />
           ))}
         </View>
@@ -164,7 +188,7 @@ export default function HomeScreen() {
   );
 }
 
-const createStyles = (colors: typeof Colors.dark) =>
+const createStyles = (colors: typeof Colors.dark, width: number) =>
   StyleSheet.create({
     container: {
       flex: 1,
@@ -185,13 +209,16 @@ const createStyles = (colors: typeof Colors.dark) =>
       fontWeight: 'bold',
       marginLeft: 8,
     },
+    cardCarousel: {
+      marginTop: 20,
+    },
     card: {
       flexDirection: 'row',
       backgroundColor: colors.card,
       padding: 20,
       borderRadius: 16,
       alignItems: 'center',
-      marginTop: 20,
+      width: width - 40,
     },
     cardText: {
       flex: 1,
@@ -228,7 +255,7 @@ const createStyles = (colors: typeof Colors.dark) =>
       width: 8,
       height: 8,
       borderRadius: 4,
-      backgroundColor: '#444',
+      backgroundColor: colors.icon,
       marginHorizontal: 4,
     },
     activeDot: {
@@ -246,7 +273,7 @@ const createStyles = (colors: typeof Colors.dark) =>
       paddingVertical: 4,
       paddingHorizontal: 10,
       borderRadius: 8,
-      backgroundColor: '#1f1f1f',
+      backgroundColor: colors.card,
       marginRight: 8,
     },
     dropdownText: {
@@ -266,7 +293,7 @@ const createStyles = (colors: typeof Colors.dark) =>
     tile: {
       width: '48%',
       aspectRatio: 1,
-      backgroundColor: '#1f1f1f',
+      backgroundColor: colors.card,
       borderRadius: 12,
       marginBottom: 16,
     },
@@ -288,7 +315,7 @@ const createStyles = (colors: typeof Colors.dark) =>
       alignItems: 'center',
     },
     modalContent: {
-      backgroundColor: '#1f1f1f',
+      backgroundColor: colors.card,
       padding: 20,
       borderRadius: 12,
       width: '80%',

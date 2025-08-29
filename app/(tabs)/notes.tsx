@@ -1,5 +1,5 @@
 /* eslint-disable import/no-unresolved */
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,6 +10,8 @@ import {
   Alert,
   TextInput,
   useWindowDimensions,
+  Animated,
+  Easing,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -17,6 +19,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { RichEditor, RichToolbar, actions } from 'react-native-pell-rich-editor';
 import RenderHTML from 'react-native-render-html';
+import { router } from 'expo-router';
 
 type Note = {
   id: string;
@@ -67,8 +70,6 @@ export default function NotesScreen() {
   const [currentNote, setCurrentNote] = useState<Note | null>(null);
   const [showSubjectColors, setShowSubjectColors] = useState(false);
   const [showNoteColors, setShowNoteColors] = useState(false);
-  const [showHighlightColors, setShowHighlightColors] = useState(false);
-  const [highlightColor, setHighlightColor] = useState('#ffeb3b');
   const [darkMode, setDarkMode] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const styles = useMemo(() => createStyles(darkMode), [darkMode]);
@@ -76,6 +77,18 @@ export default function NotesScreen() {
   const iconColor = textColor;
   const richText = useRef<RichEditor>(null);
   const { width } = useWindowDimensions();
+  const aiAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.timing(aiAnim, {
+        toValue: 1,
+        duration: 2000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    ).start();
+  }, [aiAnim]);
 
   const stripHtml = (html: string) => html.replace(/<[^>]+>/g, '');
   const filteredNotes = useMemo(
@@ -120,7 +133,6 @@ export default function NotesScreen() {
       });
     }
     setShowNoteColors(false);
-    setShowHighlightColors(false);
     setNoteModalVisible(true);
   };
 
@@ -128,7 +140,6 @@ export default function NotesScreen() {
     setNoteModalVisible(false);
     setCurrentNote(null);
     setShowNoteColors(false);
-    setShowHighlightColors(false);
   };
 
   const saveNote = (note: Note) => {
@@ -380,53 +391,11 @@ export default function NotesScreen() {
               />
               <RichToolbar
                 editor={richText}
-                actions={[
-                  actions.setBold,
-                  actions.setItalic,
-                  actions.setUnderline,
-                  actions.hiliteColor,
-                ]}
+                actions={[actions.setItalic, actions.setUnderline]}
                 iconTint={iconColor}
                 selectedIconTint={iconColor}
                 style={styles.formatBar}
-                iconMap={{
-                  [actions.hiliteColor]: ({ tintColor }) => (
-                    <Ionicons name="color-fill" size={20} color={tintColor} />
-                  ),
-                }}
-                onPress={action => {
-                  if (action === actions.hiliteColor) {
-                    setShowHighlightColors(!showHighlightColors);
-                    setShowNoteColors(false);
-                  }
-                }}
               />
-              <TouchableOpacity
-                style={[styles.highlightIndicator, { backgroundColor: highlightColor }]}
-                onPress={() => {
-                  setShowHighlightColors(!showHighlightColors);
-                  setShowNoteColors(false);
-                }}
-              />
-              {showHighlightColors && (
-                <View style={styles.colorRow}>
-                  {colorOptions.map(c => (
-                    <TouchableOpacity
-                      key={c}
-                      style={[
-                        styles.colorSwatch,
-                        { backgroundColor: c },
-                        highlightColor === c && styles.selectedSwatch,
-                      ]}
-                      onPress={() => {
-                        setHighlightColor(c);
-                        richText.current?.setHiliteColor(c);
-                        setShowHighlightColors(false);
-                      }}
-                    />
-                  ))}
-                </View>
-              )}
               {currentNote.images.map((img, idx) => (
                 <View key={img + idx} style={styles.imageContainer}>
                   <Image
@@ -450,7 +419,6 @@ export default function NotesScreen() {
                 style={styles.colorToggle}
                 onPress={() => {
                   setShowNoteColors(!showNoteColors);
-                  setShowHighlightColors(false);
                 }}
               >
                 <Ionicons name="color-palette" size={20} color={iconColor} />
@@ -494,6 +462,27 @@ export default function NotesScreen() {
                 </TouchableOpacity>
               </View>
             </ScrollView>
+            <TouchableOpacity
+              style={styles.aiButton}
+              onPress={() => router.push('/tutor')}
+            >
+              <Animated.Image
+                source={require('../../assets/images/splash-icon.png')}
+                style={[
+                  styles.aiIcon,
+                  {
+                    transform: [
+                      {
+                        rotate: aiAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: ['0deg', '360deg'],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              />
+            </TouchableOpacity>
           </View>
         )}
       </Modal>
@@ -752,13 +741,14 @@ const createStyles = (dark: boolean) => {
       borderWidth: 2,
       borderColor: textColor,
     },
-    highlightIndicator: {
-      width: 24,
-      height: 24,
-      borderRadius: 12,
-      borderWidth: 3,
-      borderColor: textColor,
-      marginTop: 8,
+    aiButton: {
+      position: 'absolute',
+      bottom: 20,
+      alignSelf: 'center',
+    },
+    aiIcon: {
+      width: 70,
+      height: 70,
     },
     imageIconContainer: {
       width: 30,

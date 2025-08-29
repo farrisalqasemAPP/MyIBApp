@@ -1,4 +1,4 @@
-// Web implementation always returns light mode.
+// Web implementation always returns dark mode.
 export function useColorScheme() {
-  return 'light';
+  return 'dark';
 }

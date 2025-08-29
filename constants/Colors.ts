@@ -1,16 +1,17 @@
 /**
- * Color palette for the app using only light mode.
+ * Color palette for the app using only dark mode.
  */
 
-const tintColorLight = '#0a7ea4';
+const tintColorDark = '#9c5dfc';
 
 export const Colors = {
-  light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
+  dark: {
+    text: '#ffffff',
+    background: '#121212',
+    card: '#1e1e1e',
+    tint: tintColorDark,
+    icon: '#9a9a9a',
+    tabIconDefault: '#9a9a9a',
+    tabIconSelected: tintColorDark,
   },
 };

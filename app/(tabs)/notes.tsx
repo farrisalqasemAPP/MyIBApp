@@ -375,18 +375,23 @@ export default function NotesScreen() {
               />
               <RichToolbar
                 editor={richText}
-                actions={[actions.bold, actions.italic, actions.underline, 'highlight']}
+                actions={[
+                  actions.setBold,
+                  actions.setItalic,
+                  actions.setUnderline,
+                  actions.hiliteColor,
+                ]}
                 iconTint={iconColor}
                 selectedIconTint={iconColor}
                 style={styles.formatBar}
                 iconMap={{
-                  highlight: ({ tintColor }) => (
+                  [actions.hiliteColor]: ({ tintColor }) => (
                     <Ionicons name="color-fill" size={20} color={tintColor} />
                   ),
                 }}
                 onPress={action => {
-                  if (action === 'highlight') {
-                    richText.current?.commandExecutor('hiliteColor', '#ffeb3b');
+                  if (action === actions.hiliteColor) {
+                    richText.current?.setHiliteColor('#ffeb3b');
                   }
                 }}
               />

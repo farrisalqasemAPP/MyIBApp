@@ -1,5 +1,4 @@
-/* eslint-disable import/no-unresolved */
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -17,7 +16,9 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { RichEditor, RichToolbar, actions } from 'react-native-pell-rich-editor';
 import RenderHTML from 'react-native-render-html';
+import { useLocalSearchParams } from 'expo-router';
 import AIButton from '../../components/AIButton';
+import { subjectData, SubjectInfo } from '@/constants/subjects';
 
 type Note = {
   id: string;
@@ -28,12 +29,8 @@ type Note = {
   images: string[];
 };
 
-type Subject = {
-  key: string;
-  title: string;
-  icon: keyof typeof Ionicons.glyphMap;
+type Subject = SubjectInfo & {
   notes: Note[];
-  color: string;
 };
 
 const colorOptions = [
@@ -51,15 +48,7 @@ const colorOptions = [
   '#ffeb3b',
 ];
 
-const initialSubjects: Subject[] = [
-  { key: 'english', title: 'English', icon: 'book', notes: [], color: colorOptions[0] },
-  { key: 'arabic', title: 'Arabic', icon: 'globe-outline', notes: [], color: colorOptions[1] },
-  { key: 'math', title: 'Math', icon: 'calculator', notes: [], color: colorOptions[2] },
-  { key: 'physics', title: 'Physics', icon: 'planet', notes: [], color: colorOptions[3] },
-  { key: 'biology', title: 'Biology', icon: 'leaf', notes: [], color: colorOptions[4] },
-  { key: 'business', title: 'Business', icon: 'briefcase', notes: [], color: colorOptions[5] },
-  { key: 'social', title: 'Social Studies', icon: 'people', notes: [], color: colorOptions[6] },
-];
+const initialSubjects: Subject[] = subjectData.map(s => ({ ...s, notes: [] }));
 
 export default function NotesScreen() {
   const [subjects, setSubjects] = useState<Subject[]>(initialSubjects);
@@ -70,10 +59,11 @@ export default function NotesScreen() {
   const [showNoteColors, setShowNoteColors] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const styles = useMemo(() => createStyles(), []);
-  const textColor = '#000';
+  const textColor = '#fff';
   const iconColor = textColor;
   const richText = useRef<RichEditor>(null);
   const { width } = useWindowDimensions();
+  const { subject: subjectParam } = useLocalSearchParams<{ subject?: string }>();
 
   const stripHtml = (html: string) => html.replace(/<[^>]+>/g, '');
   const filteredNotes = useMemo(
@@ -209,16 +199,25 @@ export default function NotesScreen() {
     setActive(prev => (prev && prev.key === active.key ? { ...prev, color } : prev));
   };
 
+  useEffect(() => {
+    if (typeof subjectParam === 'string') {
+      const match = subjects.find(s => s.key === subjectParam);
+      if (match) {
+        setActive(match);
+      }
+    }
+  }, [subjectParam, subjects]);
+
   return (
     <LinearGradient
-      colors={['#cde7ff', '#b7d9ff', '#9ccaff', '#b7d9ff']}
+      colors={['#2e1065', '#000000']}
       style={styles.container}
     >
       <Text style={styles.title}>NOTES</Text>
       <TextInput
         style={styles.searchInput}
         placeholder="Search notes..."
-        placeholderTextColor="#999"
+        placeholderTextColor="#aaa"
         value={searchQuery}
         onChangeText={setSearchQuery}
       />
@@ -351,7 +350,7 @@ export default function NotesScreen() {
               <TextInput
                 style={styles.titleInput}
                 placeholder="Title"
-                placeholderTextColor="#999"
+                placeholderTextColor="#aaa"
                 value={currentNote.title}
                 onChangeText={title => setCurrentNote({ ...currentNote, title })}
               />
@@ -444,13 +443,13 @@ export default function NotesScreen() {
 }
 
 const createStyles = () => {
-  const textColor = '#000';
-  const secondaryText = '#333';
-  const background = '#cde7ff';
-  const toggleBg = '#b7d9ff';
-  const inputBorder = '#99c1ff';
-  const selectedBorder = '#000';
-  const cancelBg = '#b0c4de';
+  const textColor = '#fff';
+  const secondaryText = '#ddd';
+  const background = '#1a1a40';
+  const toggleBg = '#2e1065';
+  const inputBorder = '#444';
+  const selectedBorder = '#fff';
+  const cancelBg = '#333';
   return StyleSheet.create({
     container: {
       flex: 1,

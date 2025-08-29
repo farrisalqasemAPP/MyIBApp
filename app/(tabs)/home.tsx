@@ -71,15 +71,6 @@ export default function HomeScreen() {
           <Text style={styles.sectionSub}>Overview</Text>
         </View>
 
-        <View style={styles.grid}>
-          {Array.from({ length: 8 }).map((_, index) => (
-            <View key={index} style={styles.tile} />
-          ))}
-        </View>
-
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionSub}>Notes</Text>
-        </View>
         <TouchableOpacity
           style={styles.notesButton}
           onPress={() => router.push(`/notes?subject=${selectedSubject.key}`)}
@@ -88,6 +79,12 @@ export default function HomeScreen() {
             Go to {selectedSubject.title} Notes
           </Text>
         </TouchableOpacity>
+
+        <View style={styles.grid}>
+          {Array.from({ length: 8 }).map((_, index) => (
+            <View key={index} style={styles.tile} />
+          ))}
+        </View>
       </ScrollView>
       <AIButton bottomOffset={20} />
       <Modal

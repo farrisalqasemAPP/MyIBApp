@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, Text } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 interface Props {
   size?: number;
@@ -10,23 +11,21 @@ export default function SiriIcon({ size = 60 }: Props) {
   const border = size * 0.03;
   const lineHeight = size * 0.02;
 
-  const containerColor = '#cccccc';
-  const notebookBackground = '#eeeeee';
-  const borderColor = '#f5f5f5';
+  const gradientColors = ['#00008b', '#2e1065'];
+  const notebookBackground = '#f5f5f5';
+  const borderColor = '#e0e0e0';
   const lineColor = borderColor;
   const watermarkColor = '#bbbbbb';
   const watermarkOutline = '#ffffff';
 
   return (
-    <View
+    <LinearGradient
+      colors={gradientColors}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
       style={[
         styles.container,
-        {
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-          backgroundColor: containerColor,
-        },
+        { width: size, height: size, borderRadius: size / 2 },
       ]}
     >
       <View
@@ -81,7 +80,7 @@ export default function SiriIcon({ size = 60 }: Props) {
           AI
         </Text>
       </View>
-    </View>
+    </LinearGradient>
   );
 }
 

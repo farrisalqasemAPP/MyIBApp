@@ -218,7 +218,7 @@ export default function NotesScreen() {
       colors={
         darkMode
           ? ['#0d0d3d', '#1a1a40', '#3b2e7e', '#6a0dad']
-          : ['#e0f7ff', '#cceeff', '#b3e5ff', '#cceeff']
+          : ['#cde7ff', '#b7d9ff', '#9ccaff', '#b7d9ff']
       }
       style={styles.container}
     >
@@ -401,6 +401,13 @@ export default function NotesScreen() {
                   }
                 }}
               />
+              <TouchableOpacity
+                style={[styles.highlightIndicator, { backgroundColor: highlightColor }]}
+                onPress={() => {
+                  setShowHighlightColors(!showHighlightColors);
+                  setShowNoteColors(false);
+                }}
+              />
               {showHighlightColors && (
                 <View style={styles.colorRow}>
                   {colorOptions.map(c => (
@@ -464,29 +471,29 @@ export default function NotesScreen() {
                   ))}
                 </View>
               )}
-            </ScrollView>
-            <View style={styles.noteModalButtons}>
-              <TouchableOpacity
-                style={styles.saveButton}
-                onPress={() => {
-                  saveNote(currentNote);
-                  closeNote();
-                }}
-              >
-                <Text style={styles.saveButtonText}>Save</Text>
-              </TouchableOpacity>
-              {active?.notes.some(n => n.id === currentNote.id) && (
+              <View style={styles.noteModalButtons}>
                 <TouchableOpacity
-                  style={styles.deleteButton}
-                  onPress={() => confirmDeleteNote(currentNote.id, closeNote)}
+                  style={styles.saveButton}
+                  onPress={() => {
+                    saveNote(currentNote);
+                    closeNote();
+                  }}
                 >
-                  <Text style={styles.saveButtonText}>Delete</Text>
+                  <Text style={styles.saveButtonText}>Save</Text>
                 </TouchableOpacity>
-              )}
-              <TouchableOpacity style={styles.cancelButton} onPress={closeNote}>
-                <Text style={styles.saveButtonText}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
+                {active?.notes.some(n => n.id === currentNote.id) && (
+                  <TouchableOpacity
+                    style={styles.deleteButton}
+                    onPress={() => confirmDeleteNote(currentNote.id, closeNote)}
+                  >
+                    <Text style={styles.saveButtonText}>Delete</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity style={styles.cancelButton} onPress={closeNote}>
+                  <Text style={styles.saveButtonText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
           </View>
         )}
       </Modal>
@@ -497,8 +504,8 @@ export default function NotesScreen() {
 const createStyles = (dark: boolean) => {
   const textColor = dark ? '#dcd6f7' : '#000';
   const secondaryText = dark ? '#e0e0e0' : '#333';
-  const background = dark ? '#0d0d3d' : '#e0f7ff';
-  const toggleBg = dark ? '#1a1a40' : '#cceeff';
+  const background = dark ? '#0d0d3d' : '#cde7ff';
+  const toggleBg = dark ? '#1a1a40' : '#b7d9ff';
   const inputBorder = dark ? '#2e1065' : '#99c1ff';
   const selectedBorder = dark ? '#fff' : '#000';
   const cancelBg = dark ? '#6c757d' : '#b0c4de';
@@ -701,7 +708,7 @@ const createStyles = (dark: boolean) => {
       flexDirection: 'row',
       justifyContent: 'space-around',
       padding: 16,
-      marginBottom: 30,
+      marginTop: 24,
     },
     saveButton: {
       backgroundColor: '#2e1065',
@@ -744,6 +751,14 @@ const createStyles = (dark: boolean) => {
       borderRadius: 12,
       borderWidth: 2,
       borderColor: textColor,
+    },
+    highlightIndicator: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      borderWidth: 3,
+      borderColor: textColor,
+      marginTop: 8,
     },
     imageIconContainer: {
       width: 30,

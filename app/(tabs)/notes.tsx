@@ -68,10 +68,9 @@ export default function NotesScreen() {
   const [currentNote, setCurrentNote] = useState<Note | null>(null);
   const [showSubjectColors, setShowSubjectColors] = useState(false);
   const [showNoteColors, setShowNoteColors] = useState(false);
-  const [darkMode, setDarkMode] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const styles = useMemo(() => createStyles(darkMode), [darkMode]);
-  const textColor = darkMode ? '#dcd6f7' : '#000';
+  const styles = useMemo(() => createStyles(), []);
+  const textColor = '#000';
   const iconColor = textColor;
   const richText = useRef<RichEditor>(null);
   const { width } = useWindowDimensions();
@@ -212,11 +211,7 @@ export default function NotesScreen() {
 
   return (
     <LinearGradient
-      colors={
-        darkMode
-          ? ['#0d0d3d', '#1a1a40', '#3b2e7e', '#6a0dad']
-          : ['#cde7ff', '#b7d9ff', '#9ccaff', '#b7d9ff']
-      }
+      colors={['#cde7ff', '#b7d9ff', '#9ccaff', '#b7d9ff']}
       style={styles.container}
     >
       <Text style={styles.title}>NOTES</Text>
@@ -268,17 +263,6 @@ export default function NotesScreen() {
           ))}
         </ScrollView>
       )}
-      <TouchableOpacity
-        style={styles.themeToggle}
-        onPress={() => setDarkMode(!darkMode)}
-      >
-        <Ionicons
-          name={darkMode ? 'moon' : 'sunny'}
-          size={24}
-          color={iconColor}
-        />
-      </TouchableOpacity>
-
       <AIButton />
 
       <Modal visible={!!active} animationType="slide">
@@ -459,14 +443,14 @@ export default function NotesScreen() {
   );
 }
 
-const createStyles = (dark: boolean) => {
-  const textColor = dark ? '#dcd6f7' : '#000';
-  const secondaryText = dark ? '#e0e0e0' : '#333';
-  const background = dark ? '#0d0d3d' : '#cde7ff';
-  const toggleBg = dark ? '#1a1a40' : '#b7d9ff';
-  const inputBorder = dark ? '#2e1065' : '#99c1ff';
-  const selectedBorder = dark ? '#fff' : '#000';
-  const cancelBg = dark ? '#6c757d' : '#b0c4de';
+const createStyles = () => {
+  const textColor = '#000';
+  const secondaryText = '#333';
+  const background = '#cde7ff';
+  const toggleBg = '#b7d9ff';
+  const inputBorder = '#99c1ff';
+  const selectedBorder = '#000';
+  const cancelBg = '#b0c4de';
   return StyleSheet.create({
     container: {
       flex: 1,
@@ -686,17 +670,6 @@ const createStyles = (dark: boolean) => {
     saveButtonText: {
       color: textColor,
       fontSize: 16,
-    },
-    themeToggle: {
-      position: 'absolute',
-      bottom: 30,
-      right: 20,
-      width: 60,
-      height: 60,
-      borderRadius: 30,
-      backgroundColor: toggleBg,
-      justifyContent: 'center',
-      alignItems: 'center',
     },
     colorToggle: {
       flexDirection: 'row',

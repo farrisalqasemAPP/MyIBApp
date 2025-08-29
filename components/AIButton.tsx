@@ -3,7 +3,12 @@ import { TouchableOpacity, Animated, Easing, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import SiriIcon from './SiriIcon';
 
-export default function AIButton() {
+interface Props {
+  bottomOffset?: number;
+  size?: number;
+}
+
+export default function AIButton({ bottomOffset = 20, size }: Props) {
   const float = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -26,9 +31,14 @@ export default function AIButton() {
   }, [float]);
 
   return (
-    <Animated.View style={[styles.container, { transform: [{ translateY: float }] }]}>
+    <Animated.View
+      style={[
+        styles.container,
+        { transform: [{ translateY: float }], bottom: bottomOffset },
+      ]}
+    >
       <TouchableOpacity onPress={() => router.push('/tutor')}>
-        <SiriIcon />
+        <SiriIcon size={size} />
       </TouchableOpacity>
     </Animated.View>
   );
@@ -37,7 +47,6 @@ export default function AIButton() {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 20,
     alignSelf: 'center',
   },
 });

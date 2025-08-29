@@ -354,7 +354,7 @@ export default function NotesScreen() {
             <TouchableOpacity style={styles.closeButton} onPress={closeSubject}>
               <Text style={styles.closeButtonText}>Close</Text>
             </TouchableOpacity>
-            <AIButton />
+            <AIButton bottomOffset={100} />
           </View>
         )}
       </Modal>
@@ -451,7 +451,7 @@ export default function NotesScreen() {
                 </TouchableOpacity>
               </View>
             </ScrollView>
-            <AIButton />
+            <AIButton bottomOffset={100} />
           </View>
         )}
       </Modal>

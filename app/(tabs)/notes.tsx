@@ -1,5 +1,5 @@
 /* eslint-disable import/no-unresolved */
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,8 +10,6 @@ import {
   Alert,
   TextInput,
   useWindowDimensions,
-  Animated,
-  Easing,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -19,7 +17,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { RichEditor, RichToolbar, actions } from 'react-native-pell-rich-editor';
 import RenderHTML from 'react-native-render-html';
-import { router } from 'expo-router';
+import AIButton from '../../components/AIButton';
 
 type Note = {
   id: string;
@@ -77,18 +75,6 @@ export default function NotesScreen() {
   const iconColor = textColor;
   const richText = useRef<RichEditor>(null);
   const { width } = useWindowDimensions();
-  const aiAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.timing(aiAnim, {
-        toValue: 1,
-        duration: 2000,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      }),
-    ).start();
-  }, [aiAnim]);
 
   const stripHtml = (html: string) => html.replace(/<[^>]+>/g, '');
   const filteredNotes = useMemo(
@@ -293,6 +279,8 @@ export default function NotesScreen() {
         />
       </TouchableOpacity>
 
+      <AIButton />
+
       <Modal visible={!!active} animationType="slide">
         {active && (
           <View style={styles.modalContainer}>
@@ -366,6 +354,7 @@ export default function NotesScreen() {
             <TouchableOpacity style={styles.closeButton} onPress={closeSubject}>
               <Text style={styles.closeButtonText}>Close</Text>
             </TouchableOpacity>
+            <AIButton />
           </View>
         )}
       </Modal>
@@ -462,27 +451,7 @@ export default function NotesScreen() {
                 </TouchableOpacity>
               </View>
             </ScrollView>
-            <TouchableOpacity
-              style={styles.aiButton}
-              onPress={() => router.push('/tutor')}
-            >
-              <Animated.Image
-                source={require('../../assets/images/splash-icon.png')}
-                style={[
-                  styles.aiIcon,
-                  {
-                    transform: [
-                      {
-                        rotate: aiAnim.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: ['0deg', '360deg'],
-                        }),
-                      },
-                    ],
-                  },
-                ]}
-              />
-            </TouchableOpacity>
+            <AIButton />
           </View>
         )}
       </Modal>
@@ -740,15 +709,6 @@ const createStyles = (dark: boolean) => {
       borderRadius: 12,
       borderWidth: 2,
       borderColor: textColor,
-    },
-    aiButton: {
-      position: 'absolute',
-      bottom: 20,
-      alignSelf: 'center',
-    },
-    aiIcon: {
-      width: 70,
-      height: 70,
     },
     imageIconContainer: {
       width: 30,

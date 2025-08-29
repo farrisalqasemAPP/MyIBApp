@@ -42,6 +42,14 @@ To learn more about developing your project with Expo, look at the following res
 - [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
 - [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
 
+## AI Tutor
+
+The Tutor tab connects to a ChatGPT-powered assistant focused on the IB system in Jordan for 11th grade. To enable responses, supply an OpenAI API key via the `EXPO_PUBLIC_OPENAI_API_KEY` environment variable.
+
+```bash
+EXPO_PUBLIC_OPENAI_API_KEY=your_key_here npx expo start
+```
+
 ## Join the community
 
 Join our community of developers creating universal apps.

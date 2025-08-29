@@ -1,3 +1,4 @@
+/* eslint-disable import/no-unresolved */
 import React, { useState, useMemo, useRef } from 'react';
 import {
   StyleSheet,
@@ -66,6 +67,8 @@ export default function NotesScreen() {
   const [currentNote, setCurrentNote] = useState<Note | null>(null);
   const [showSubjectColors, setShowSubjectColors] = useState(false);
   const [showNoteColors, setShowNoteColors] = useState(false);
+  const [showHighlightColors, setShowHighlightColors] = useState(false);
+  const [highlightColor, setHighlightColor] = useState('#ffeb3b');
   const [darkMode, setDarkMode] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const styles = useMemo(() => createStyles(darkMode), [darkMode]);
@@ -117,6 +120,7 @@ export default function NotesScreen() {
       });
     }
     setShowNoteColors(false);
+    setShowHighlightColors(false);
     setNoteModalVisible(true);
   };
 
@@ -124,6 +128,7 @@ export default function NotesScreen() {
     setNoteModalVisible(false);
     setCurrentNote(null);
     setShowNoteColors(false);
+    setShowHighlightColors(false);
   };
 
   const saveNote = (note: Note) => {
@@ -213,7 +218,7 @@ export default function NotesScreen() {
       colors={
         darkMode
           ? ['#0d0d3d', '#1a1a40', '#3b2e7e', '#6a0dad']
-          : ['#ffffff', '#e0e0e0']
+          : ['#e0f7ff', '#cceeff', '#b3e5ff', '#cceeff']
       }
       style={styles.container}
     >
@@ -391,10 +396,30 @@ export default function NotesScreen() {
                 }}
                 onPress={action => {
                   if (action === actions.hiliteColor) {
-                    richText.current?.setHiliteColor('#ffeb3b');
+                    setShowHighlightColors(!showHighlightColors);
+                    setShowNoteColors(false);
                   }
                 }}
               />
+              {showHighlightColors && (
+                <View style={styles.colorRow}>
+                  {colorOptions.map(c => (
+                    <TouchableOpacity
+                      key={c}
+                      style={[
+                        styles.colorSwatch,
+                        { backgroundColor: c },
+                        highlightColor === c && styles.selectedSwatch,
+                      ]}
+                      onPress={() => {
+                        setHighlightColor(c);
+                        richText.current?.setHiliteColor(c);
+                        setShowHighlightColors(false);
+                      }}
+                    />
+                  ))}
+                </View>
+              )}
               {currentNote.images.map((img, idx) => (
                 <View key={img + idx} style={styles.imageContainer}>
                   <Image
@@ -416,7 +441,10 @@ export default function NotesScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.colorToggle}
-                onPress={() => setShowNoteColors(!showNoteColors)}
+                onPress={() => {
+                  setShowNoteColors(!showNoteColors);
+                  setShowHighlightColors(false);
+                }}
               >
                 <Ionicons name="color-palette" size={20} color={iconColor} />
                 <Text style={styles.addButtonText}>Colors</Text>
@@ -469,11 +497,11 @@ export default function NotesScreen() {
 const createStyles = (dark: boolean) => {
   const textColor = dark ? '#dcd6f7' : '#000';
   const secondaryText = dark ? '#e0e0e0' : '#333';
-  const background = dark ? '#0d0d3d' : '#fff';
-  const toggleBg = dark ? '#1a1a40' : '#e0e0e0';
-  const inputBorder = dark ? '#2e1065' : '#ccc';
+  const background = dark ? '#0d0d3d' : '#e0f7ff';
+  const toggleBg = dark ? '#1a1a40' : '#cceeff';
+  const inputBorder = dark ? '#2e1065' : '#99c1ff';
   const selectedBorder = dark ? '#fff' : '#000';
-  const cancelBg = dark ? '#6c757d' : '#ccc';
+  const cancelBg = dark ? '#6c757d' : '#b0c4de';
   return StyleSheet.create({
     container: {
       flex: 1,
@@ -673,32 +701,34 @@ const createStyles = (dark: boolean) => {
       flexDirection: 'row',
       justifyContent: 'space-around',
       padding: 16,
+      marginBottom: 30,
     },
     saveButton: {
       backgroundColor: '#2e1065',
-      padding: 12,
+      padding: 16,
       borderRadius: 8,
     },
     deleteButton: {
       backgroundColor: '#dc3545',
-      padding: 12,
+      padding: 16,
       borderRadius: 8,
     },
     cancelButton: {
       backgroundColor: cancelBg,
-      padding: 12,
+      padding: 16,
       borderRadius: 8,
     },
     saveButtonText: {
       color: textColor,
+      fontSize: 16,
     },
     themeToggle: {
       position: 'absolute',
-      bottom: 20,
+      bottom: 30,
       right: 20,
-      width: 50,
-      height: 50,
-      borderRadius: 25,
+      width: 60,
+      height: 60,
+      borderRadius: 30,
       backgroundColor: toggleBg,
       justifyContent: 'center',
       alignItems: 'center',

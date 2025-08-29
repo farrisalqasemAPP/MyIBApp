@@ -1,4 +1,4 @@
-// Always use light mode throughout the app.
+// Always use dark mode throughout the app.
 export function useColorScheme() {
-  return 'light';
+  return 'dark';
 }

@@ -10,11 +10,11 @@ export default function SiriIcon({ size = 60 }: Props) {
   const border = size * 0.03;
   const lineHeight = size * 0.02;
 
-  const containerColor = '#b5d1ff';
-  const notebookBackground = '#333333';
-  const borderColor = '#ffffff';
+  const containerColor = '#cccccc';
+  const notebookBackground = '#eeeeee';
+  const borderColor = '#f5f5f5';
   const lineColor = borderColor;
-  const watermarkColor = '#000000';
+  const watermarkColor = '#bbbbbb';
   const watermarkOutline = '#ffffff';
 
   return (

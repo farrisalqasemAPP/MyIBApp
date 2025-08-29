@@ -1,17 +1,23 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
 import AIButton from '@/components/AIButton';
 import { Colors } from '@/constants/Colors';
+import { subjectData, SubjectInfo } from '@/constants/subjects';
 
 export default function HomeScreen() {
+  const [selectedSubject, setSelectedSubject] = useState<SubjectInfo>(subjectData[0]);
+  const [showSubjects, setShowSubjects] = useState(false);
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -51,8 +57,11 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.sectionHeader}>
-          <TouchableOpacity style={styles.dropdown}>
-            <Text style={styles.dropdownText}>Math</Text>
+          <TouchableOpacity
+            style={styles.dropdown}
+            onPress={() => setShowSubjects(true)}
+          >
+            <Text style={styles.dropdownText}>{selectedSubject.title}</Text>
             <Ionicons
               name="chevron-down"
               size={16}
@@ -67,8 +76,47 @@ export default function HomeScreen() {
             <View key={index} style={styles.tile} />
           ))}
         </View>
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionSub}>Notes</Text>
+        </View>
+        <TouchableOpacity
+          style={styles.notesButton}
+          onPress={() => router.push(`/notes?subject=${selectedSubject.key}`)}
+        >
+          <Text style={styles.notesButtonText}>
+            Go to {selectedSubject.title} Notes
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
       <AIButton bottomOffset={20} />
+      <Modal
+        visible={showSubjects}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowSubjects(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          onPress={() => setShowSubjects(false)}
+          activeOpacity={1}
+        >
+          <View style={styles.modalContent}>
+            {subjectData.map(subject => (
+              <TouchableOpacity
+                key={subject.key}
+                style={styles.modalItem}
+                onPress={() => {
+                  setSelectedSubject(subject);
+                  setShowSubjects(false);
+                }}
+              >
+                <Text style={styles.modalItemText}>{subject.title}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -170,6 +218,36 @@ const styles = StyleSheet.create({
     backgroundColor: '#1f1f1f',
     borderRadius: 12,
     marginBottom: 16,
+  },
+  notesButton: {
+    backgroundColor: Colors.dark.card,
+    padding: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  notesButtonText: {
+    color: Colors.dark.text,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#1f1f1f',
+    padding: 20,
+    borderRadius: 12,
+    width: '80%',
+  },
+  modalItem: {
+    paddingVertical: 10,
+  },
+  modalItemText: {
+    color: Colors.dark.text,
+    fontSize: 16,
   },
 });
 

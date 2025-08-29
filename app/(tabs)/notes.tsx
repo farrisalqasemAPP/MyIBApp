@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -6,14 +6,16 @@ import {
   ScrollView,
   TouchableOpacity,
   Modal,
-  TextInput,
   Alert,
+  TextInput,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
-// eslint-disable-next-line import/no-unresolved
 import { LinearGradient } from 'expo-linear-gradient';
+import { RichEditor, RichToolbar, actions } from 'react-native-pell-rich-editor';
+import RenderHTML from 'react-native-render-html';
 
 type Note = {
   id: string;
@@ -22,10 +24,6 @@ type Note = {
   color: string;
   date: string;
   images: string[];
-  bold: boolean;
-  italic: boolean;
-  underline: boolean;
-  highlight: boolean;
 };
 
 type Subject = {
@@ -71,8 +69,12 @@ export default function NotesScreen() {
   const [darkMode, setDarkMode] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const styles = useMemo(() => createStyles(darkMode), [darkMode]);
-  const iconColor = darkMode ? '#dcd6f7' : '#000';
+  const textColor = darkMode ? '#dcd6f7' : '#000';
+  const iconColor = textColor;
+  const richText = useRef<RichEditor>(null);
+  const { width } = useWindowDimensions();
 
+  const stripHtml = (html: string) => html.replace(/<[^>]+>/g, '');
   const filteredNotes = useMemo(
     () =>
       subjects.flatMap(s =>
@@ -81,7 +83,7 @@ export default function NotesScreen() {
             const q = searchQuery.toLowerCase();
             return (
               n.title.toLowerCase().includes(q) ||
-              n.text.toLowerCase().includes(q)
+              stripHtml(n.text).toLowerCase().includes(q)
             );
           })
           .map(n => ({ subject: s, note: n })),
@@ -103,10 +105,6 @@ export default function NotesScreen() {
       setCurrentNote({
         ...note,
         images: note.images || [],
-        bold: note.bold || false,
-        italic: note.italic || false,
-        underline: note.underline || false,
-        highlight: note.highlight || false,
       });
     } else {
       setCurrentNote({
@@ -116,10 +114,6 @@ export default function NotesScreen() {
         color: active?.color || colorOptions[0],
         date: new Date().toLocaleDateString(),
         images: [],
-        bold: false,
-        italic: false,
-        underline: false,
-        highlight: false,
       });
     }
     setShowNoteColors(false);
@@ -246,18 +240,12 @@ export default function NotesScreen() {
               <Text style={styles.noteDate}>
                 {note.date} - {subject.title}
               </Text>
-              <Text
-                style={[
-                  styles.noteText,
-                  note.bold && styles.boldText,
-                  note.italic && styles.italicText,
-                  note.underline && styles.underlineText,
-                  note.highlight && styles.highlightText,
-                ]}
-                numberOfLines={3}
-              >
-                {note.text}
-              </Text>
+              <RenderHTML
+                contentWidth={width}
+                source={{ html: note.text }}
+                baseStyle={styles.noteText}
+                defaultTextProps={{ numberOfLines: 3, ellipsizeMode: 'tail' }}
+              />
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -292,18 +280,17 @@ export default function NotesScreen() {
       <Modal visible={!!active} animationType="slide">
         {active && (
           <View style={styles.modalContainer}>
-            <View style={[styles.modalHeader, { backgroundColor: active.color }]}>
-              <Ionicons name={active.icon} size={28} color={iconColor} />
-              <Text style={styles.modalTitle}>{active.title}</Text>
+            <View style={[styles.modalHeader, { backgroundColor: active.color }]}> 
+              <View style={styles.headerLeft}>
+                <Ionicons name={active.icon} size={28} color={iconColor} />
+                <Text style={styles.modalTitle}>{active.title}</Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.colorIndicator, { backgroundColor: active.color }]}
+                onPress={() => setShowSubjectColors(!showSubjectColors)}
+              />
             </View>
             <ScrollView contentContainerStyle={styles.modalContent}>
-              <TouchableOpacity
-                style={styles.colorToggle}
-                onPress={() => setShowSubjectColors(!showSubjectColors)}
-              >
-                <Ionicons name="color-palette" size={20} color={iconColor} />
-                <Text style={styles.addButtonText}>Colors</Text>
-              </TouchableOpacity>
               {showSubjectColors && (
                 <View style={styles.colorRow}>
                   {colorOptions.map(c => (
@@ -327,18 +314,12 @@ export default function NotesScreen() {
                   <TouchableOpacity style={styles.noteBody} onPress={() => openNote(note)}>
                     <Text style={styles.noteTitle}>{note.title}</Text>
                     <Text style={styles.noteDate}>{note.date}</Text>
-                    <Text
-                      style={[
-                        styles.noteText,
-                        note.bold && styles.boldText,
-                        note.italic && styles.italicText,
-                        note.underline && styles.underlineText,
-                        note.highlight && styles.highlightText,
-                      ]}
-                      numberOfLines={3}
-                    >
-                      {note.text}
-                    </Text>
+                    <RenderHTML
+                      contentWidth={width}
+                      source={{ html: note.text }}
+                      baseStyle={styles.noteText}
+                      defaultTextProps={{ numberOfLines: 3, ellipsizeMode: 'tail' }}
+                    />
                     {note.images.length > 0 && (
                       note.images.length === 1 ? (
                         <Image
@@ -385,76 +366,30 @@ export default function NotesScreen() {
                 value={currentNote.title}
                 onChangeText={title => setCurrentNote({ ...currentNote, title })}
               />
-              <TextInput
-                style={[
-                  styles.input,
-                  currentNote.bold && styles.boldText,
-                  currentNote.italic && styles.italicText,
-                  currentNote.underline && styles.underlineText,
-                  currentNote.highlight && styles.highlightText,
-                ]}
-                placeholder="Write your note..."
-                placeholderTextColor="#999"
-                multiline
-                value={currentNote.text}
-                onChangeText={text => setCurrentNote({ ...currentNote, text })}
+              <RichEditor
+                ref={richText}
+                initialContentHTML={currentNote.text}
+                editorStyle={{ backgroundColor: 'transparent', color: textColor }}
+                style={styles.richEditor}
+                onChange={text => setCurrentNote({ ...currentNote, text })}
               />
-              <View style={styles.formatBar}>
-                <TouchableOpacity
-                  style={[
-                    styles.formatButton,
-                    currentNote.bold && styles.activeFormat,
-                  ]}
-                  onPress={() =>
-                    setCurrentNote({ ...currentNote, bold: !currentNote.bold })
+              <RichToolbar
+                editor={richText}
+                actions={[actions.bold, actions.italic, actions.underline, 'highlight']}
+                iconTint={iconColor}
+                selectedIconTint={iconColor}
+                style={styles.formatBar}
+                iconMap={{
+                  highlight: ({ tintColor }) => (
+                    <Ionicons name="color-fill" size={20} color={tintColor} />
+                  ),
+                }}
+                onPress={action => {
+                  if (action === 'highlight') {
+                    richText.current?.commandExecutor('hiliteColor', '#ffeb3b');
                   }
-                >
-                  <Text style={{ fontWeight: 'bold', color: iconColor }}>B</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.formatButton,
-                    currentNote.italic && styles.activeFormat,
-                  ]}
-                  onPress={() =>
-                    setCurrentNote({ ...currentNote, italic: !currentNote.italic })
-                  }
-                >
-                  <Text style={{ fontStyle: 'italic', color: iconColor }}>I</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.formatButton,
-                    currentNote.underline && styles.activeFormat,
-                  ]}
-                  onPress={() =>
-                    setCurrentNote({
-                      ...currentNote,
-                      underline: !currentNote.underline,
-                    })
-                  }
-                >
-                  <Text
-                    style={{ textDecorationLine: 'underline', color: iconColor }}
-                  >
-                    U
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.formatButton,
-                    currentNote.highlight && styles.activeFormat,
-                  ]}
-                  onPress={() =>
-                    setCurrentNote({
-                      ...currentNote,
-                      highlight: !currentNote.highlight,
-                    })
-                  }
-                >
-                  <Ionicons name="color-fill" size={20} color={iconColor} />
-                </TouchableOpacity>
-              </View>
+                }}
+              />
               {currentNote.images.map((img, idx) => (
                 <View key={img + idx} style={styles.imageContainer}>
                   <Image
@@ -591,6 +526,11 @@ const createStyles = (dark: boolean) => {
       padding: 16,
       flexDirection: 'row',
       alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    headerLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
     },
     modalTitle: {
       marginLeft: 8,
@@ -676,36 +616,23 @@ const createStyles = (dark: boolean) => {
       color: textColor,
       marginBottom: 12,
     },
-    input: {
+    richEditor: {
       minHeight: 120,
       borderColor: inputBorder,
       borderWidth: 1,
       borderRadius: 8,
       padding: 12,
-      color: textColor,
-      textAlignVertical: 'top',
     },
     formatBar: {
-      flexDirection: 'row',
       marginTop: 8,
-    },
-    formatButton: {
-      padding: 8,
-      marginRight: 8,
-      borderRadius: 4,
       backgroundColor: toggleBg,
+      borderRadius: 4,
     },
-    activeFormat: {
-      backgroundColor: '#2e1065',
-    },
-    boldText: { fontWeight: 'bold' },
-    italicText: { fontStyle: 'italic' },
-    underlineText: { textDecorationLine: 'underline' },
-    highlightText: { backgroundColor: '#ffeb3b' },
     colorRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       marginTop: 16,
+      marginBottom: 16,
     },
     colorSwatch: {
       width: 30,
@@ -775,6 +702,13 @@ const createStyles = (dark: boolean) => {
       flexDirection: 'row',
       alignItems: 'center',
       marginTop: 16,
+    },
+    colorIndicator: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      borderWidth: 2,
+      borderColor: textColor,
     },
     imageIconContainer: {
       width: 30,

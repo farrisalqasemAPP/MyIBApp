@@ -11,7 +11,7 @@ interface Props {
 
 export default function AIButton({ bottomOffset = 20, size }: Props) {
   const float = useRef(new Animated.Value(0)).current;
-  const spin = useRef(new Animated.Value(0)).current;
+  const pulse = useRef(new Animated.Value(1)).current;
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -37,29 +37,33 @@ export default function AIButton({ bottomOffset = 20, size }: Props) {
     let animation: Animated.CompositeAnimation | undefined;
     if (loading) {
       animation = Animated.loop(
-        Animated.timing(spin, {
-          toValue: 1,
-          duration: 1000,
-          easing: Easing.linear,
-          useNativeDriver: true,
-        }),
+        Animated.sequence([
+          Animated.timing(pulse, {
+            toValue: 1.2,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulse, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+        ]),
       );
       animation.start();
+    } else {
+      pulse.setValue(1);
     }
     return () => animation?.stop();
-  }, [loading, spin]);
+  }, [loading, pulse]);
 
   const handlePress = () => {
     setLoading(true);
     setTimeout(() => {
+      setLoading(false);
       router.push('/tutor');
     }, 1000);
   };
-
-  const rotate = spin.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
 
   return (
     <>
@@ -75,7 +79,7 @@ export default function AIButton({ bottomOffset = 20, size }: Props) {
       </Animated.View>
       {loading && (
         <LinearGradient colors={['#00008b', '#2e1065']} style={styles.overlay}>
-          <Animated.View style={{ transform: [{ rotate }] }}>
+          <Animated.View style={{ transform: [{ scale: pulse }] }}>
             <SiriIcon size={(size ?? 60) * 1.5} />
           </Animated.View>
         </LinearGradient>

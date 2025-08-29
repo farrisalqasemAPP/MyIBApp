@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
+import { Colors } from '@/constants/Colors';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -87,7 +88,7 @@ export default function TutorScreen() {
           value={input}
           onChangeText={setInput}
           placeholder="Ask about IB Jordan Grade 11..."
-          placeholderTextColor="#888"
+          placeholderTextColor={Colors.dark.icon}
           multiline
         />
         <TouchableOpacity
@@ -105,7 +106,7 @@ export default function TutorScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1c1c1c',
+    backgroundColor: Colors.dark.background,
     padding: 12,
   },
   messages: {
@@ -123,17 +124,17 @@ const styles = StyleSheet.create({
   },
   userMessage: {
     alignSelf: 'flex-end',
-    backgroundColor: '#f4d03f',
+    backgroundColor: Colors.dark.tint,
   },
   assistantMessage: {
     alignSelf: 'flex-start',
-    backgroundColor: '#333',
+    backgroundColor: Colors.dark.card,
   },
   userText: {
-    color: '#1c1c1c',
+    color: Colors.dark.text,
   },
   assistantText: {
-    color: '#f4d03f',
+    color: Colors.dark.text,
   },
   inputRow: {
     flexDirection: 'row',
@@ -141,21 +142,21 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    backgroundColor: '#333',
-    color: '#f4d03f',
+    backgroundColor: Colors.dark.card,
+    color: Colors.dark.text,
     padding: 8,
     borderRadius: 6,
     maxHeight: 120,
   },
   sendButton: {
     marginLeft: 8,
-    backgroundColor: '#f4d03f',
+    backgroundColor: Colors.dark.tint,
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 6,
   },
   sendText: {
-    color: '#1c1c1c',
+    color: Colors.dark.text,
     fontWeight: 'bold',
   },
 });

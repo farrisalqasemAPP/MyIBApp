@@ -15,7 +15,7 @@ export default function SiriIcon({ size = 60 }: Props) {
   const notebookBackground = '#f5f5f5';
   const borderColor = '#e0e0e0';
   const lineColor = borderColor;
-  const watermarkColor = '#bbbbbb';
+  const watermarkColor = '#000000';
   const watermarkOutline = '#ffffff';
 
   return (
@@ -72,8 +72,8 @@ export default function SiriIcon({ size = 60 }: Props) {
               right: -size * 0.08,
               color: watermarkColor,
               textShadowColor: watermarkOutline,
-              textShadowOffset: { width: 1, height: 1 },
-              textShadowRadius: 1,
+              textShadowOffset: { width: 0, height: 0 },
+              textShadowRadius: size * 0.05,
             },
           ]}
         >

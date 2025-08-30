@@ -58,6 +58,9 @@ export default function NotesScreen() {
   const [showSubjectColors, setShowSubjectColors] = useState(false);
   const [showNoteColors, setShowNoteColors] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [addSubjectModalVisible, setAddSubjectModalVisible] = useState(false);
+  const [newSubjectTitle, setNewSubjectTitle] = useState('');
+  const [newSubjectColor, setNewSubjectColor] = useState(colorOptions[0]);
   const styles = useMemo(() => createStyles(), []);
   const textColor = '#fff';
   const iconColor = textColor;
@@ -199,6 +202,23 @@ export default function NotesScreen() {
     setActive(prev => (prev && prev.key === active.key ? { ...prev, color } : prev));
   };
 
+  const handleAddSubject = () => {
+    if (!newSubjectTitle.trim()) return;
+    const key =
+      newSubjectTitle.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now().toString();
+    const newSubject: Subject = {
+      key,
+      title: newSubjectTitle.trim(),
+      icon: 'book',
+      color: newSubjectColor,
+      notes: [],
+    };
+    setSubjects(prev => [...prev, newSubject]);
+    setAddSubjectModalVisible(false);
+    setNewSubjectTitle('');
+    setNewSubjectColor(colorOptions[0]);
+  };
+
   useEffect(() => {
     if (typeof subjectParam === 'string') {
       const match = subjects.find(s => s.key === subjectParam);
@@ -260,9 +280,54 @@ export default function NotesScreen() {
               )}
             </TouchableOpacity>
           ))}
+          <TouchableOpacity
+            key="add-subject"
+            style={[styles.box, styles.addBox]}
+            onPress={() => setAddSubjectModalVisible(true)}
+          >
+            <Ionicons name="add" size={32} color={iconColor} />
+            <Text style={styles.boxTitle}>ADD</Text>
+          </TouchableOpacity>
         </ScrollView>
       )}
       <AIButton />
+
+      <Modal visible={addSubjectModalVisible} animationType="slide">
+        <View style={styles.addSubjectContainer}>
+          <Text style={styles.modalTitle}>Add Subject</Text>
+          <TextInput
+            style={styles.titleInput}
+            placeholder="Subject Name"
+            placeholderTextColor="#aaa"
+            value={newSubjectTitle}
+            onChangeText={setNewSubjectTitle}
+          />
+          <View style={styles.colorRow}>
+            {colorOptions.map(c => (
+              <TouchableOpacity
+                key={c}
+                style={[
+                  styles.colorSwatch,
+                  { backgroundColor: c },
+                  newSubjectColor === c && styles.selectedSwatch,
+                ]}
+                onPress={() => setNewSubjectColor(c)}
+              />
+            ))}
+          </View>
+          <View style={styles.noteModalButtons}>
+            <TouchableOpacity style={styles.saveButton} onPress={handleAddSubject}>
+              <Text style={styles.saveButtonText}>Save</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => setAddSubjectModalVisible(false)}
+            >
+              <Text style={styles.saveButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={!!active} animationType="slide">
         {active && (
@@ -486,6 +551,12 @@ const createStyles = () => {
       marginBottom: 12,
       alignItems: 'center',
     },
+    addBox: {
+      borderWidth: 1,
+      borderColor: inputBorder,
+      backgroundColor: 'transparent',
+      justifyContent: 'center',
+    },
     boxTitle: {
       marginTop: 8,
       color: textColor,
@@ -588,6 +659,12 @@ const createStyles = () => {
       flex: 1,
       backgroundColor: background,
       paddingTop: 32,
+    },
+    addSubjectContainer: {
+      flex: 1,
+      backgroundColor: background,
+      paddingTop: 32,
+      padding: 16,
     },
     titleInput: {
       borderColor: inputBorder,

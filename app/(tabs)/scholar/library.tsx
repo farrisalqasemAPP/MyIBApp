@@ -3,11 +3,11 @@ import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '@/constants/Colors';
 
-export default function ScholarScreen() {
+export default function LibraryScreen() {
   return (
     <LinearGradient colors={['#6a0dad', '#0000ff']} style={styles.container}>
       <View style={styles.center}>
-        <Text style={styles.text}>Scholar resources coming soon.</Text>
+        <Text style={styles.text}>Library resources coming soon.</Text>
       </View>
     </LinearGradient>
   );

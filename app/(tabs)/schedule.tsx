@@ -9,96 +9,141 @@ import {
   TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { LinearGradient } from 'expo-linear-gradient';
 
-type Event = {
-  id: string;
-  title: string;
-  date: Date;
+type DayData = {
+  notes: string;
+  events: string[];
 };
 
 export default function ScheduleScreen() {
-  const [events, setEvents] = useState<Event[]>([]);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [newTitle, setNewTitle] = useState('');
-  const [newDate, setNewDate] = useState(new Date());
-  const [showPicker, setShowPicker] = useState(false);
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [schedule, setSchedule] = useState<Record<string, DayData>>({});
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [tempNotes, setTempNotes] = useState('');
+  const [currentEvents, setCurrentEvents] = useState<string[]>([]);
+  const [newEvent, setNewEvent] = useState('');
 
-  const addEvent = () => {
-    setEvents(prev => [
-      ...prev,
-      { id: Date.now().toString(), title: newTitle || 'Untitled', date: newDate },
-    ]);
-    setModalVisible(false);
-    setNewTitle('');
-    setNewDate(new Date());
+  const month = currentDate.getMonth();
+  const year = currentDate.getFullYear();
+
+  const getMonthName = (date: Date) =>
+    date.toLocaleString('default', { month: 'long' });
+
+  const toKey = (date: Date) => date.toISOString().split('T')[0];
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDay = new Date(year, month, 1).getDay();
+
+  const cells: (Date | null)[] = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d));
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const openDay = (date: Date) => {
+    const key = toKey(date);
+    const data = schedule[key] || { notes: '', events: [] };
+    setSelectedDate(date);
+    setTempNotes(data.notes);
+    setCurrentEvents(data.events);
+    setNewEvent('');
   };
 
-  const onChange = (_: any, selectedDate?: Date) => {
-    setShowPicker(false);
-    if (selectedDate) setNewDate(selectedDate);
+  const saveDay = () => {
+    if (!selectedDate) return;
+    const key = toKey(selectedDate);
+    setSchedule(prev => ({
+      ...prev,
+      [key]: { notes: tempNotes, events: currentEvents },
+    }));
+    setSelectedDate(null);
+  };
+
+  const addEvent = () => {
+    if (newEvent.trim()) {
+      setCurrentEvents(prev => [...prev, newEvent.trim()]);
+      setNewEvent('');
+    }
   };
 
   return (
-    <LinearGradient colors={['#2e1065', '#000']} style={styles.container}>
-      <Text style={styles.title}>SCHEDULE</Text>
-      <ScrollView contentContainerStyle={styles.content}>
-        {events.map(event => (
-          <View key={event.id} style={styles.eventCard}>
-            <Text style={styles.eventTitle}>{event.title}</Text>
-            <Text style={styles.eventDate}>{event.date.toLocaleString()}</Text>
-          </View>
-        ))}
-        {events.length === 0 && (
-          <Text style={styles.emptyText}>No events yet.</Text>
-        )}
-      </ScrollView>
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => setModalVisible(true)}
-      >
-        <Ionicons name="add" size={28} color="#fff" />
-      </TouchableOpacity>
+    <LinearGradient colors={["#2e1065", "#000"]} style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => setCurrentDate(new Date(year, month - 1, 1))}>
+          <Ionicons name="chevron-back" size={24} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.title}>{getMonthName(currentDate)} {year}</Text>
+        <TouchableOpacity onPress={() => setCurrentDate(new Date(year, month + 1, 1))}>
+          <Ionicons name="chevron-forward" size={24} color="#fff" />
+        </TouchableOpacity>
+      </View>
 
-      <Modal visible={modalVisible} animationType="slide">
-        <View style={styles.modalContainer}>
-          <Text style={styles.modalTitle}>Add Event</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Event title"
-            placeholderTextColor="#aaa"
-            value={newTitle}
-            onChangeText={setNewTitle}
-          />
-          <TouchableOpacity
-            style={styles.dateButton}
-            onPress={() => setShowPicker(true)}
-          >
-            <Ionicons name="calendar" size={20} color="#fff" />
-            <Text style={styles.dateButtonText}>
-              {newDate.toLocaleString()}
-            </Text>
-          </TouchableOpacity>
-          {showPicker && (
-            <DateTimePicker
-              value={newDate}
-              mode="datetime"
-              display="default"
-              onChange={onChange}
-            />
-          )}
-          <View style={styles.modalButtons}>
-            <TouchableOpacity style={styles.saveButton} onPress={addEvent}>
-              <Text style={styles.saveButtonText}>Save</Text>
-            </TouchableOpacity>
+      <View style={styles.weekRow}>
+        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+          <Text key={d} style={styles.weekDay}>{d}</Text>
+        ))}
+      </View>
+
+      <View style={styles.calendar}>
+        {cells.map((date, index) => {
+          const key = date ? toKey(date) : index.toString();
+          const hasData = date ? schedule[toKey(date)] : false;
+          return (
             <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => setModalVisible(false)}
+              key={key}
+              style={styles.dayCell}
+              onPress={() => date && openDay(date)}
+              disabled={!date}
             >
-              <Text style={styles.saveButtonText}>Cancel</Text>
+              {date && <Text style={styles.dayText}>{date.getDate()}</Text>}
+              {date && hasData && <View style={styles.dot} />}
             </TouchableOpacity>
-          </View>
+          );
+        })}
+      </View>
+
+      <Modal
+        visible={!!selectedDate}
+        animationType="slide"
+        onRequestClose={() => setSelectedDate(null)}
+      >
+        <View style={styles.modalContainer}>
+          {selectedDate && (
+            <>
+              <Text style={styles.modalTitle}>{selectedDate.toDateString()}</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Notes"
+                placeholderTextColor="#aaa"
+                value={tempNotes}
+                onChangeText={setTempNotes}
+                multiline
+              />
+              <ScrollView style={styles.eventsList}>
+                {currentEvents.map((ev, idx) => (
+                  <Text key={idx} style={styles.eventItem}>• {ev}</Text>
+                ))}
+              </ScrollView>
+              <TextInput
+                style={styles.input}
+                placeholder="New event"
+                placeholderTextColor="#aaa"
+                value={newEvent}
+                onChangeText={setNewEvent}
+              />
+              <View style={styles.modalButtons}>
+                <TouchableOpacity style={styles.saveButton} onPress={addEvent}>
+                  <Text style={styles.saveButtonText}>Add Event</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.saveButton} onPress={saveDay}>
+                  <Text style={styles.saveButtonText}>Save</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.cancelButton} onPress={() => setSelectedDate(null)}>
+                  <Text style={styles.saveButtonText}>Close</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
         </View>
       </Modal>
     </LinearGradient>
@@ -106,52 +151,56 @@ export default function ScheduleScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  title: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginTop: 40,
+  container: { flex: 1, paddingTop: 40 },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
     marginBottom: 16,
   },
-  content: {
-    padding: 16,
-    paddingBottom: 100,
-  },
-  eventCard: {
-    backgroundColor: '#2e1065',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 12,
-  },
-  eventTitle: {
+  title: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: 'bold',
   },
-  eventDate: {
-    color: '#ddd',
-    marginTop: 4,
+  weekRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
   },
-  emptyText: {
-    color: '#fff',
+  weekDay: {
+    width: '14.28%',
     textAlign: 'center',
-    marginTop: 32,
+    color: '#fff',
+    fontWeight: '600',
   },
-  addButton: {
-    position: 'absolute',
-    right: 20,
-    bottom: 40,
-    backgroundColor: '#2e1065',
-    borderRadius: 30,
-    padding: 16,
+  calendar: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  dayCell: {
+    width: '14.28%',
+    aspectRatio: 1,
+    borderWidth: 0.5,
+    borderColor: '#444',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dayText: {
+    color: '#fff',
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#6d28d9',
+    marginTop: 4,
   },
   modalContainer: {
     flex: 1,
     backgroundColor: '#1a1a40',
-    paddingTop: 60,
     padding: 16,
+    paddingTop: 60,
   },
   modalTitle: {
     color: '#fff',
@@ -165,36 +214,36 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 8,
     color: '#fff',
-    marginBottom: 16,
+    marginBottom: 12,
   },
-  dateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#2e1065',
-    padding: 12,
-    borderRadius: 8,
+  eventsList: {
+    maxHeight: 120,
+    marginBottom: 12,
   },
-  dateButtonText: {
+  eventItem: {
     color: '#fff',
-    marginLeft: 8,
+    marginBottom: 4,
   },
   modalButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginTop: 24,
+    justifyContent: 'space-between',
   },
   saveButton: {
     backgroundColor: '#2e1065',
-    padding: 16,
+    padding: 12,
     borderRadius: 8,
+    flex: 1,
+    marginRight: 8,
+    alignItems: 'center',
   },
   cancelButton: {
     backgroundColor: '#333',
-    padding: 16,
+    padding: 12,
     borderRadius: 8,
+    flex: 1,
+    alignItems: 'center',
   },
   saveButtonText: {
     color: '#fff',
   },
 });
-

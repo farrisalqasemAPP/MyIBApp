@@ -68,21 +68,14 @@ export default function ScheduleScreen() {
   const saveDay = () => {
     if (!selectedDate) return;
     const key = toKey(selectedDate);
+    const eventsToSave = newEvent.trim()
+      ? [...currentEvents, { text: newEvent.trim(), color: newEventColor }]
+      : currentEvents;
     setSchedule(prev => ({
       ...prev,
-      [key]: { notes: tempNotes, events: currentEvents },
+      [key]: { notes: tempNotes, events: eventsToSave },
     }));
     setSelectedDate(null);
-  };
-
-  const addEvent = () => {
-    if (newEvent.trim()) {
-      setCurrentEvents(prev => [
-        ...prev,
-        { text: newEvent.trim(), color: newEventColor },
-      ]);
-      setNewEvent('');
-    }
   };
 
   return (
@@ -107,21 +100,36 @@ export default function ScheduleScreen() {
         {cells.map((date, index) => {
           const key = date ? toKey(date) : index.toString();
           const dayData = date ? schedule[toKey(date)] : undefined;
-          const dayColor = dayData?.events[0]?.color;
+          const indicatorColor = dayData
+            ? dayData.events.length > 0
+              ? dayData.events[0].color
+              : dayData.notes.trim()
+              ? '#800080'
+              : null
+            : null;
           const isToday = date && toKey(date) === toKey(new Date());
           return (
             <TouchableOpacity
               key={key}
-              style={[styles.dayCell, dayColor && { backgroundColor: dayColor }]}
+              style={styles.dayCell}
               onPress={() => date && openDay(date)}
               disabled={!date}
             >
-              {date && isToday ? (
-                <View style={styles.todayCircle}>
-                  <Text style={styles.dayText}>{date.getDate()}</Text>
-                </View>
-              ) : (
-                date && <Text style={styles.dayText}>{date.getDate()}</Text>
+              {date && (
+                <>
+                  {isToday ? (
+                    <View style={styles.todayCircle}>
+                      <Text style={styles.dayText}>{date.getDate()}</Text>
+                    </View>
+                  ) : (
+                    <Text style={styles.dayText}>{date.getDate()}</Text>
+                  )}
+                  {indicatorColor && (
+                    <View
+                      style={[styles.indicatorDot, { backgroundColor: indicatorColor }]}
+                    />
+                  )}
+                </>
               )}
             </TouchableOpacity>
           );
@@ -180,13 +188,13 @@ export default function ScheduleScreen() {
                 ))}
               </ScrollView>
               <View style={styles.modalButtons}>
-                <TouchableOpacity style={styles.saveButton} onPress={addEvent}>
-                  <Text style={styles.saveButtonText}>Add Event</Text>
-                </TouchableOpacity>
                 <TouchableOpacity style={styles.saveButton} onPress={saveDay}>
                   <Text style={styles.saveButtonText}>Save</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.cancelButton} onPress={() => setSelectedDate(null)}>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => setSelectedDate(null)}
+                >
                   <Text style={styles.saveButtonText}>Close</Text>
                 </TouchableOpacity>
               </View>
@@ -214,10 +222,9 @@ const styles = StyleSheet.create({
   },
   weekRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
   },
   weekDay: {
-    width: '14.28%',
+    flex: 1,
     textAlign: 'center',
     color: '#fff',
     fontWeight: '600',
@@ -228,15 +235,20 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   dayCell: {
-    width: '14.28%',
+    width: '14.2857%',
     height: '16.66%',
-    margin: 2,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
   dayText: {
     color: '#fff',
+  },
+  indicatorDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginTop: 2,
   },
   todayCircle: {
     width: 32,

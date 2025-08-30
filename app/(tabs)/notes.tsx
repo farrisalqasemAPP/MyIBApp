@@ -31,6 +31,7 @@ type Note = {
 
 type Subject = SubjectInfo & {
   notes: Note[];
+  info?: string;
 };
 
 type TrashNote = Note & { subjectKey: string; subjectTitle: string };
@@ -258,21 +259,41 @@ export default function NotesScreen() {
     setActive(prev => (prev && prev.key === active.key ? { ...prev, color } : prev));
   };
 
-  const handleAddSubject = () => {
+  const fetchSubjectInfo = async (title: string) => {
+    try {
+      const res = await fetch(
+        `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`,
+      );
+      if (res.ok) {
+        const data = await res.json();
+        return data.extract as string;
+      }
+    } catch {
+      return null;
+    }
+    return null;
+  };
+
+  const handleAddSubject = async () => {
     if (!newSubjectTitle.trim()) return;
     const key =
       newSubjectTitle.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now().toString();
+    const info = await fetchSubjectInfo(newSubjectTitle.trim());
     const newSubject: Subject = {
       key,
       title: newSubjectTitle.trim(),
       icon: 'book',
       color: newSubjectColor,
       notes: [],
+      ...(info ? { info } : {}),
     };
     setSubjects(prev => [...prev, newSubject]);
     setAddSubjectModalVisible(false);
     setNewSubjectTitle('');
     setNewSubjectColor(colorOptions[0]);
+    if (!info) {
+      Alert.alert('No info found', 'Could not find information on this subject online.');
+    }
   };
 
   useEffect(() => {

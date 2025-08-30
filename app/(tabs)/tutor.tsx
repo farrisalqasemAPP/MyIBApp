@@ -22,6 +22,7 @@ export default function TutorScreen() {
         'Hello! I\'m your IB Jordan grade 11 tutor. How can I help you today?\n',
     },
   ]);
+  const contextLimit = 5;
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -32,6 +33,7 @@ export default function TutorScreen() {
     setInput('');
     setLoading(true);
     try {
+      const context = newMessages.slice(-contextLimit);
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -46,7 +48,7 @@ export default function TutorScreen() {
               content:
                 'You are a helpful tutor for the International Baccalaureate (IB) system in Jordan for 11th grade students.',
             },
-            ...newMessages,
+            ...context,
           ],
         }),
       });
@@ -67,6 +69,9 @@ export default function TutorScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerText}>Clarity</Text>
+      </View>
       <ScrollView style={styles.messages} contentContainerStyle={styles.messagesContent}>
         {messages.map((m, idx) => (
           <View
@@ -157,6 +162,15 @@ const styles = StyleSheet.create({
   },
   sendText: {
     color: Colors.dark.text,
+    fontWeight: 'bold',
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  headerText: {
+    color: Colors.dark.text,
+    fontSize: 24,
     fontWeight: 'bold',
   },
 });

@@ -11,9 +11,23 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
+const eventColorOptions = [
+  '#FF6633', '#FFB399', '#FF33FF', '#FFFF99', '#00B3E6', '#E6B333',
+  '#3366E6', '#999966', '#99FF99', '#B34D4D', '#80B300', '#809900',
+  '#E6B3B3', '#6680B3', '#66991A', '#FF99E6', '#CCFF1A', '#FF1A66',
+  '#E6331A', '#33FFCC', '#66994D', '#B366CC', '#4D8000', '#B33300',
+  '#CC80CC', '#66664D', '#991AFF', '#E666FF', '#4DB3FF', '#1AB399',
+  '#E666B3', '#33991A', '#CC9999', '#B3B31A', '#00E680', '#4D8066',
+  '#809980', '#E6FF80', '#1AFF33', '#999933', '#FF3380', '#CCCC00',
+  '#66E64D', '#4D80CC', '#9900B3', '#E64D66', '#4DB380', '#FF4D4D',
+  '#99E6E6', '#6666FF',
+];
+
+type Event = { text: string; color: string };
+
 type DayData = {
   notes: string;
-  events: string[];
+  events: Event[];
 };
 
 export default function ScheduleScreen() {
@@ -21,8 +35,9 @@ export default function ScheduleScreen() {
   const [schedule, setSchedule] = useState<Record<string, DayData>>({});
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [tempNotes, setTempNotes] = useState('');
-  const [currentEvents, setCurrentEvents] = useState<string[]>([]);
+  const [currentEvents, setCurrentEvents] = useState<Event[]>([]);
   const [newEvent, setNewEvent] = useState('');
+  const [newEventColor, setNewEventColor] = useState(eventColorOptions[0]);
 
   const month = currentDate.getMonth();
   const year = currentDate.getFullYear();
@@ -47,6 +62,7 @@ export default function ScheduleScreen() {
     setTempNotes(data.notes);
     setCurrentEvents(data.events);
     setNewEvent('');
+    setNewEventColor(eventColorOptions[0]);
   };
 
   const saveDay = () => {
@@ -61,7 +77,10 @@ export default function ScheduleScreen() {
 
   const addEvent = () => {
     if (newEvent.trim()) {
-      setCurrentEvents(prev => [...prev, newEvent.trim()]);
+      setCurrentEvents(prev => [
+        ...prev,
+        { text: newEvent.trim(), color: newEventColor },
+      ]);
       setNewEvent('');
     }
   };
@@ -87,16 +106,23 @@ export default function ScheduleScreen() {
       <View style={styles.calendar}>
         {cells.map((date, index) => {
           const key = date ? toKey(date) : index.toString();
-          const hasData = date ? schedule[toKey(date)] : false;
+          const dayData = date ? schedule[toKey(date)] : undefined;
+          const dayColor = dayData?.events[0]?.color;
+          const isToday = date && toKey(date) === toKey(new Date());
           return (
             <TouchableOpacity
               key={key}
-              style={styles.dayCell}
+              style={[styles.dayCell, dayColor && { backgroundColor: dayColor }]}
               onPress={() => date && openDay(date)}
               disabled={!date}
             >
-              {date && <Text style={styles.dayText}>{date.getDate()}</Text>}
-              {date && hasData && <View style={styles.dot} />}
+              {date && isToday ? (
+                <View style={styles.todayCircle}>
+                  <Text style={styles.dayText}>{date.getDate()}</Text>
+                </View>
+              ) : (
+                date && <Text style={styles.dayText}>{date.getDate()}</Text>
+              )}
             </TouchableOpacity>
           );
         })}
@@ -121,7 +147,12 @@ export default function ScheduleScreen() {
               />
               <ScrollView style={styles.eventsList}>
                 {currentEvents.map((ev, idx) => (
-                  <Text key={idx} style={styles.eventItem}>• {ev}</Text>
+                  <View key={idx} style={styles.eventItem}>
+                    <View
+                      style={[styles.eventColor, { backgroundColor: ev.color }]}
+                    />
+                    <Text style={styles.eventText}>{ev.text}</Text>
+                  </View>
                 ))}
               </ScrollView>
               <TextInput
@@ -131,6 +162,23 @@ export default function ScheduleScreen() {
                 value={newEvent}
                 onChangeText={setNewEvent}
               />
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.colorOptions}
+              >
+                {eventColorOptions.map(color => (
+                  <TouchableOpacity
+                    key={color}
+                    style={[
+                      styles.colorOption,
+                      { backgroundColor: color },
+                      newEventColor === color && styles.selectedColor,
+                    ]}
+                    onPress={() => setNewEventColor(color)}
+                  />
+                ))}
+              </ScrollView>
               <View style={styles.modalButtons}>
                 <TouchableOpacity style={styles.saveButton} onPress={addEvent}>
                   <Text style={styles.saveButtonText}>Add Event</Text>
@@ -151,7 +199,7 @@ export default function ScheduleScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingTop: 40 },
+  container: { flex: 1, paddingTop: 60 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -175,26 +223,29 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   calendar: {
+    flex: 1,
     flexDirection: 'row',
     flexWrap: 'wrap',
   },
   dayCell: {
     width: '14.28%',
-    aspectRatio: 1,
-    borderWidth: 0.5,
-    borderColor: '#444',
+    height: '16.66%',
+    margin: 2,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
   dayText: {
     color: '#fff',
   },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#6d28d9',
-    marginTop: 4,
+  todayCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   modalContainer: {
     flex: 1,
@@ -221,8 +272,31 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   eventItem: {
-    color: '#fff',
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 4,
+  },
+  eventColor: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  eventText: {
+    color: '#fff',
+  },
+  colorOptions: {
+    marginBottom: 12,
+  },
+  colorOption: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    marginRight: 8,
+  },
+  selectedColor: {
+    borderWidth: 2,
+    borderColor: '#fff',
   },
   modalButtons: {
     flexDirection: 'row',

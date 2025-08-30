@@ -26,7 +26,7 @@ const eventColorOptions = [
 type Event = { text: string; color: string };
 
 type DayData = {
-  notes: string;
+  notes: string[];
   events: Event[];
 };
 
@@ -34,7 +34,8 @@ export default function ScheduleScreen() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [schedule, setSchedule] = useState<Record<string, DayData>>({});
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [tempNotes, setTempNotes] = useState('');
+  const [currentNotes, setCurrentNotes] = useState<string[]>([]);
+  const [newNote, setNewNote] = useState('');
   const [currentEvents, setCurrentEvents] = useState<Event[]>([]);
   const [newEvent, setNewEvent] = useState('');
   const [newEventColor, setNewEventColor] = useState(eventColorOptions[0]);
@@ -57,23 +58,47 @@ export default function ScheduleScreen() {
 
   const openDay = (date: Date) => {
     const key = toKey(date);
-    const data = schedule[key] || { notes: '', events: [] };
+    const data = schedule[key] || { notes: [], events: [] };
     setSelectedDate(date);
-    setTempNotes(data.notes);
+    setCurrentNotes(data.notes);
     setCurrentEvents(data.events);
+    setNewNote('');
     setNewEvent('');
     setNewEventColor(eventColorOptions[0]);
+  };
+
+  const addNote = () => {
+    if (newNote.trim()) {
+      setCurrentNotes(prev => [...prev, newNote.trim()]);
+      setNewNote('');
+    }
+  };
+
+  const deleteNote = (index: number) => {
+    setCurrentNotes(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const addEvent = () => {
+    if (newEvent.trim()) {
+      setCurrentEvents(prev => [
+        ...prev,
+        { text: newEvent.trim(), color: newEventColor },
+      ]);
+      setNewEvent('');
+      setNewEventColor(eventColorOptions[0]);
+    }
+  };
+
+  const deleteEvent = (index: number) => {
+    setCurrentEvents(prev => prev.filter((_, i) => i !== index));
   };
 
   const saveDay = () => {
     if (!selectedDate) return;
     const key = toKey(selectedDate);
-    const eventsToSave = newEvent.trim()
-      ? [...currentEvents, { text: newEvent.trim(), color: newEventColor }]
-      : currentEvents;
     setSchedule(prev => ({
       ...prev,
-      [key]: { notes: tempNotes, events: eventsToSave },
+      [key]: { notes: currentNotes, events: currentEvents },
     }));
     setSelectedDate(null);
   };
@@ -100,14 +125,9 @@ export default function ScheduleScreen() {
         {cells.map((date, index) => {
           const key = date ? toKey(date) : index.toString();
           const dayData = date ? schedule[toKey(date)] : undefined;
-          const indicatorColor = dayData
-            ? dayData.events.length > 0
-              ? dayData.events[0].color
-              : dayData.notes.trim()
-              ? '#800080'
-              : null
-            : null;
           const isToday = date && toKey(date) === toKey(new Date());
+          const eventColors = dayData ? dayData.events.map(ev => ev.color) : [];
+          const hasNotes = dayData ? dayData.notes.length > 0 : false;
           return (
             <TouchableOpacity
               key={key}
@@ -117,17 +137,24 @@ export default function ScheduleScreen() {
             >
               {date && (
                 <>
+                  {eventColors.length > 0 && (
+                    <View style={styles.eventBackgroundContainer}>
+                      {eventColors.map((color, idx) => (
+                        <View key={idx} style={{ flex: 1, backgroundColor: color }} />
+                      ))}
+                    </View>
+                  )}
+                  {eventColors.length === 0 && hasNotes && (
+                    <View
+                      style={[styles.eventBackgroundContainer, { backgroundColor: '#800080' }]}
+                    />
+                  )}
                   {isToday ? (
                     <View style={styles.todayCircle}>
                       <Text style={styles.dayText}>{date.getDate()}</Text>
                     </View>
                   ) : (
                     <Text style={styles.dayText}>{date.getDate()}</Text>
-                  )}
-                  {indicatorColor && (
-                    <View
-                      style={[styles.indicatorDot, { backgroundColor: indicatorColor }]}
-                    />
                   )}
                 </>
               )}
@@ -145,14 +172,27 @@ export default function ScheduleScreen() {
           {selectedDate && (
             <>
               <Text style={styles.modalTitle}>{selectedDate.toDateString()}</Text>
+              <ScrollView style={styles.notesList}>
+                {currentNotes.map((note, idx) => (
+                  <View key={idx} style={styles.noteItem}>
+                    <Text style={styles.noteText}>{note}</Text>
+                    <TouchableOpacity onPress={() => deleteNote(idx)}>
+                      <Ionicons name="trash" size={16} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </ScrollView>
               <TextInput
                 style={styles.input}
-                placeholder="Notes"
+                placeholder="New note"
                 placeholderTextColor="#aaa"
-                value={tempNotes}
-                onChangeText={setTempNotes}
-                multiline
+                value={newNote}
+                onChangeText={setNewNote}
               />
+              <TouchableOpacity style={styles.addButton} onPress={addNote}>
+                <Text style={styles.addButtonText}>Add Note</Text>
+              </TouchableOpacity>
+
               <ScrollView style={styles.eventsList}>
                 {currentEvents.map((ev, idx) => (
                   <View key={idx} style={styles.eventItem}>
@@ -160,6 +200,9 @@ export default function ScheduleScreen() {
                       style={[styles.eventColor, { backgroundColor: ev.color }]}
                     />
                     <Text style={styles.eventText}>{ev.text}</Text>
+                    <TouchableOpacity onPress={() => deleteEvent(idx)}>
+                      <Ionicons name="trash" size={16} color="#fff" />
+                    </TouchableOpacity>
                   </View>
                 ))}
               </ScrollView>
@@ -187,6 +230,9 @@ export default function ScheduleScreen() {
                   />
                 ))}
               </ScrollView>
+              <TouchableOpacity style={styles.addButton} onPress={addEvent}>
+                <Text style={styles.addButtonText}>Add Event</Text>
+              </TouchableOpacity>
               <View style={styles.modalButtons}>
                 <TouchableOpacity style={styles.saveButton} onPress={saveDay}>
                   <Text style={styles.saveButtonText}>Save</Text>
@@ -240,15 +286,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   dayText: {
     color: '#fff',
   },
-  indicatorDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginTop: 2,
+  eventBackgroundContainer: {
+    ...StyleSheet.absoluteFillObject,
+    flexDirection: 'row',
+    borderRadius: 8,
   },
   todayCircle: {
     width: 32,
@@ -296,6 +342,7 @@ const styles = StyleSheet.create({
   },
   eventText: {
     color: '#fff',
+    flex: 1,
   },
   colorOptions: {
     marginBottom: 12,
@@ -309,6 +356,31 @@ const styles = StyleSheet.create({
   selectedColor: {
     borderWidth: 2,
     borderColor: '#fff',
+  },
+  notesList: {
+    maxHeight: 120,
+    marginBottom: 12,
+  },
+  noteItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  noteText: {
+    color: '#fff',
+    flex: 1,
+    marginRight: 6,
+  },
+  addButton: {
+    backgroundColor: '#2e1065',
+    padding: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  addButtonText: {
+    color: '#fff',
   },
   modalButtons: {
     flexDirection: 'row',

@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '@/constants/Colors';
 
 interface Message {
@@ -19,7 +20,7 @@ export default function TutorScreen() {
     {
       role: 'assistant',
       content:
-        'Hello! I\'m your IB Jordan grade 11 tutor. How can I help you today?\n',
+        "Hello! I'm your IB Jordan grade 11 tutor. How can I help you today?\n",
     },
   ]);
   const contextLimit = 5;
@@ -52,6 +53,9 @@ export default function TutorScreen() {
           ],
         }),
       });
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
       const data = await response.json();
       const reply = data.choices?.[0]?.message?.content?.trim();
       if (reply) {
@@ -68,7 +72,7 @@ export default function TutorScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <LinearGradient colors={['#6a0dad', '#0000ff']} style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerText}>Clarity</Text>
       </View>
@@ -104,14 +108,13 @@ export default function TutorScreen() {
           <Text style={styles.sendText}>{loading ? '...' : 'Send'}</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.dark.background,
     padding: 12,
   },
   messages: {
@@ -174,4 +177,3 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
-

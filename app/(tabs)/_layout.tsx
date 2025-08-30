@@ -96,6 +96,24 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="library"
+        options={{
+          title: 'Library',
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons size={28} name="local-library" color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="planner"
+        options={{
+          title: 'Planner',
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons size={28} name="event-note" color={color} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }

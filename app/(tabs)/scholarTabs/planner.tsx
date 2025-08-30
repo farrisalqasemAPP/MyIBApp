@@ -7,6 +7,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Colors } from '@/constants/Colors';
+import { LinearGradient } from 'expo-linear-gradient';
 import { subjectData } from '@/constants/subjects';
 
 export default function PlannerScreen() {
@@ -32,42 +33,43 @@ export default function PlannerScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.header}>Select your subjects</Text>
-      <View style={styles.subjects}>
-        {subjectData.map(subject => {
-          const active = selected.includes(subject.key);
-          return (
-            <TouchableOpacity
-              key={subject.key}
-              style={[styles.subjectItem, active && styles.subjectItemActive]}
-              onPress={() => toggleSubject(subject.key)}
-            >
-              <Text style={styles.subjectText}>{subject.title}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-      <TouchableOpacity style={styles.generateButton} onPress={generatePlan}>
-        <Text style={styles.generateText}>Generate Study Plan</Text>
-      </TouchableOpacity>
-      {plan.length > 0 && (
-        <View style={styles.plan}>
-          {plan.map((p, idx) => (
-            <Text key={idx} style={styles.planText}>
-              {p.day}: {p.subject}
-            </Text>
-          ))}
+    <LinearGradient colors={['#6a0dad', '#0000ff']} style={{ flex: 1 }}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <Text style={styles.header}>Select your subjects</Text>
+        <View style={styles.subjects}>
+          {subjectData.map(subject => {
+            const active = selected.includes(subject.key);
+            return (
+              <TouchableOpacity
+                key={subject.key}
+                style={[styles.subjectItem, active && styles.subjectItemActive]}
+                onPress={() => toggleSubject(subject.key)}
+              >
+                <Text style={styles.subjectText}>{subject.title}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
-      )}
-    </ScrollView>
+        <TouchableOpacity style={styles.generateButton} onPress={generatePlan}>
+          <Text style={styles.generateText}>Generate Study Plan</Text>
+        </TouchableOpacity>
+        {plan.length > 0 && (
+          <View style={styles.plan}>
+            {plan.map((p, idx) => (
+              <Text key={idx} style={styles.planText}>
+                {p.day}: {p.subject}
+              </Text>
+            ))}
+          </View>
+        )}
+      </ScrollView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.dark.background,
   },
   content: {
     padding: 16,

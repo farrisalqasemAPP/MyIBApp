@@ -9,7 +9,8 @@ import {
 } from 'react-native';
 import { subjectData } from '@/constants/subjects';
 import { curriculumUnits } from '@/constants/curriculum';
-import { ibOverview, subjectDetails } from '@/constants/ibInfo';
+import { subjectDetails } from '@/constants/ibInfo';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function CurriculumScreen() {
   const [search, setSearch] = useState('');
@@ -32,56 +33,51 @@ export default function CurriculumScreen() {
   });
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.overview}>{ibOverview}</Text>
-      <View style={styles.searchRow}>
-        <TextInput
-          style={styles.searchInput}
-          value={search}
-          onChangeText={setSearch}
-          placeholder="Search curriculum..."
-          placeholderTextColor="#888"
-        />
-        <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-          <Text style={styles.searchButtonText}>Search</Text>
-        </TouchableOpacity>
-      </View>
-      {subjects.map(subject => {
-        const units = (curriculumUnits[subject.key] || []).filter(
-          u =>
-            !query ||
-            u.title.toLowerCase().includes(query) ||
-            u.description.toLowerCase().includes(query)
-        );
-        return (
-          <View key={subject.key} style={styles.card}>
-            <Text style={[styles.subject, { color: subject.color }]}>{subject.title}</Text>
-            <Text style={styles.subjectDetail}>{subjectDetails[subject.key]}</Text>
-            {units.map((unit, idx) => (
-              <View key={idx} style={styles.unitContainer}>
-                <Text style={styles.unitTitle}>{`\u2022 ${unit.title}`}</Text>
-                <Text style={styles.unitDescription}>{unit.description}</Text>
-              </View>
-            ))}
-          </View>
-        );
-      })}
-    </ScrollView>
+    <LinearGradient colors={['#6a0dad', '#0000ff']} style={{ flex: 1 }}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <View style={styles.searchRow}>
+          <TextInput
+            style={styles.searchInput}
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search curriculum..."
+            placeholderTextColor="#888"
+          />
+          <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
+            <Text style={styles.searchButtonText}>Search</Text>
+          </TouchableOpacity>
+        </View>
+        {subjects.map(subject => {
+          const units = (curriculumUnits[subject.key] || []).filter(
+            u =>
+              !query ||
+              u.title.toLowerCase().includes(query) ||
+              u.description.toLowerCase().includes(query)
+          );
+          return (
+            <View key={subject.key} style={styles.card}>
+              <Text style={[styles.subject, { color: subject.color }]}>{subject.title}</Text>
+              <Text style={styles.subjectDetail}>{subjectDetails[subject.key]}</Text>
+              {units.map((unit, idx) => (
+                <View key={idx} style={styles.unitContainer}>
+                  <Text style={styles.unitTitle}>{`\u2022 ${unit.title}`}</Text>
+                  <Text style={styles.unitDescription}>{unit.description}</Text>
+                </View>
+              ))}
+            </View>
+          );
+        })}
+      </ScrollView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1c1c1c',
   },
   content: {
     padding: 16,
-  },
-  overview: {
-    fontSize: 16,
-    color: '#f4d03f',
-    marginBottom: 16,
   },
   searchRow: {
     flexDirection: 'row',

@@ -33,6 +33,8 @@ type Subject = SubjectInfo & {
   notes: Note[];
 };
 
+type TrashNote = Note & { subjectKey: string; subjectTitle: string };
+
 const colorOptions = [
   '#3b2e7e',
   '#6a0dad',
@@ -61,6 +63,9 @@ export default function NotesScreen() {
   const [addSubjectModalVisible, setAddSubjectModalVisible] = useState(false);
   const [newSubjectTitle, setNewSubjectTitle] = useState('');
   const [newSubjectColor, setNewSubjectColor] = useState(colorOptions[0]);
+  const [deletedSubjects, setDeletedSubjects] = useState<Subject[]>([]);
+  const [deletedNotes, setDeletedNotes] = useState<TrashNote[]>([]);
+  const [trashModalVisible, setTrashModalVisible] = useState(false);
   const styles = useMemo(() => createStyles(), []);
   const textColor = '#fff';
   const iconColor = textColor;
@@ -148,6 +153,8 @@ export default function NotesScreen() {
 
   const deleteNote = (id: string) => {
     if (!active) return;
+    const noteToDelete = active.notes.find(n => n.id === id);
+    if (!noteToDelete) return;
     setSubjects(prev =>
       prev.map(s =>
         s.key === active.key ? { ...s, notes: s.notes.filter(n => n.id !== id) } : s,
@@ -158,6 +165,10 @@ export default function NotesScreen() {
         ? { ...prev, notes: prev.notes.filter(n => n.id !== id) }
         : prev,
     );
+    setDeletedNotes(prev => [
+      ...prev,
+      { ...noteToDelete, subjectKey: active.key, subjectTitle: active.title },
+    ]);
   };
 
   const confirmDeleteNote = (id: string, onAfter?: () => void) => {
@@ -172,6 +183,51 @@ export default function NotesScreen() {
         },
       },
     ]);
+  };
+
+  const deleteSubject = (key: string) => {
+    const subjectToDelete = subjects.find(s => s.key === key);
+    if (!subjectToDelete) return;
+    setSubjects(prev => prev.filter(s => s.key !== key));
+    setDeletedSubjects(prev => [...prev, subjectToDelete]);
+    setDeletedNotes(prev => [
+      ...prev,
+      ...subjectToDelete.notes.map(n => ({
+        ...n,
+        subjectKey: subjectToDelete.key,
+        subjectTitle: subjectToDelete.title,
+      })),
+    ]);
+    if (active?.key === key) {
+      setActive(null);
+    }
+  };
+
+  const confirmDeleteSubject = (key: string) => {
+    Alert.alert('Delete Subject', 'Are you sure you want to delete this subject?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => deleteSubject(key) },
+    ]);
+  };
+
+  const restoreSubject = (key: string) => {
+    const subject = deletedSubjects.find(s => s.key === key);
+    if (!subject) return;
+    setDeletedSubjects(prev => prev.filter(s => s.key !== key));
+    setDeletedNotes(prev => prev.filter(n => n.subjectKey !== key));
+    setSubjects(prev => [...prev, subject]);
+  };
+
+  const restoreNote = (id: string) => {
+    const note = deletedNotes.find(n => n.id === id);
+    if (!note) return;
+    const subjectExists = subjects.find(s => s.key === note.subjectKey);
+    if (!subjectExists) return;
+    const { subjectKey, subjectTitle, ...rest } = note;
+    setSubjects(prev =>
+      prev.map(s => (s.key === subjectKey ? { ...s, notes: [...s.notes, rest] } : s)),
+    );
+    setDeletedNotes(prev => prev.filter(n => n.id !== id));
   };
 
   const pickImage = async () => {
@@ -233,7 +289,15 @@ export default function NotesScreen() {
       colors={['#2e1065', '#000000']}
       style={styles.container}
     >
-      <Text style={styles.title}>NOTES</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>NOTES</Text>
+        <TouchableOpacity
+          style={styles.trashIcon}
+          onPress={() => setTrashModalVisible(true)}
+        >
+          <Ionicons name="trash" size={24} color={iconColor} />
+        </TouchableOpacity>
+      </View>
       <TextInput
         style={styles.searchInput}
         placeholder="Search notes..."
@@ -268,17 +332,27 @@ export default function NotesScreen() {
       ) : (
         <ScrollView contentContainerStyle={styles.grid}>
           {subjects.map(subject => (
-            <TouchableOpacity
+            <View
               key={subject.key}
               style={[styles.box, { backgroundColor: subject.color }]}
-              onPress={() => openSubject(subject)}
             >
-              <Ionicons name={subject.icon} size={32} color={iconColor} />
-              <Text style={styles.boxTitle}>{subject.title}</Text>
-              {subject.notes.length > 0 && (
-                <Text style={styles.boxNote}>{subject.notes.length} notes</Text>
-              )}
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.subjectDeleteIcon}
+                onPress={() => confirmDeleteSubject(subject.key)}
+              >
+                <Ionicons name="close" size={16} color={iconColor} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.boxContent}
+                onPress={() => openSubject(subject)}
+              >
+                <Ionicons name={subject.icon} size={32} color={iconColor} />
+                <Text style={styles.boxTitle}>{subject.title}</Text>
+                {subject.notes.length > 0 && (
+                  <Text style={styles.boxNote}>{subject.notes.length} notes</Text>
+                )}
+              </TouchableOpacity>
+            </View>
           ))}
           <TouchableOpacity
             key="add-subject"
@@ -291,6 +365,62 @@ export default function NotesScreen() {
         </ScrollView>
       )}
       <AIButton />
+
+      <Modal visible={trashModalVisible} animationType="slide">
+        <View style={styles.modalContainer}>
+          <Text style={styles.modalTitle}>Trash</Text>
+          <ScrollView contentContainerStyle={styles.modalContent}>
+            {deletedSubjects.length > 0 && (
+              <>
+                <Text style={styles.sectionHeader}>Subjects</Text>
+                {deletedSubjects.map(s => (
+                  <View
+                    key={s.key}
+                    style={[styles.trashCard, { backgroundColor: s.color }]}
+                  >
+                    <Text style={styles.noteTitle}>{s.title}</Text>
+                    <TouchableOpacity
+                      style={styles.restoreButton}
+                      onPress={() => restoreSubject(s.key)}
+                    >
+                      <Text style={styles.saveButtonText}>Restore</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </>
+            )}
+            {deletedNotes.length > 0 && (
+              <>
+                <Text style={styles.sectionHeader}>Notes</Text>
+                {deletedNotes.map(n => (
+                  <View
+                    key={n.id}
+                    style={[styles.trashCard, { backgroundColor: n.color }]}
+                  >
+                    <Text style={styles.noteTitle}>{n.title}</Text>
+                    <Text style={styles.noteDate}>{n.subjectTitle}</Text>
+                    <TouchableOpacity
+                      style={styles.restoreButton}
+                      onPress={() => restoreNote(n.id)}
+                    >
+                      <Text style={styles.saveButtonText}>Restore</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </>
+            )}
+            {!deletedSubjects.length && !deletedNotes.length && (
+              <Text style={styles.noteDate}>Trash is empty</Text>
+            )}
+          </ScrollView>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => setTrashModalVisible(false)}
+          >
+            <Text style={styles.closeButtonText}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
 
       <Modal visible={addSubjectModalVisible} animationType="slide">
         <View style={styles.addSubjectContainer}>
@@ -521,12 +651,22 @@ const createStyles = () => {
       padding: 16,
       paddingTop: 40,
     },
+    header: {
+      position: 'relative',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
     title: {
       color: textColor,
       fontSize: 24,
       fontWeight: 'bold',
       textAlign: 'center',
-      marginBottom: 16,
+    },
+    trashIcon: {
+      position: 'absolute',
+      right: 0,
+      top: 0,
+      padding: 4,
     },
     grid: {
       flexDirection: 'row',
@@ -550,6 +690,16 @@ const createStyles = () => {
       padding: 16,
       marginBottom: 12,
       alignItems: 'center',
+      position: 'relative',
+    },
+    boxContent: {
+      alignItems: 'center',
+    },
+    subjectDeleteIcon: {
+      position: 'absolute',
+      top: 4,
+      right: 4,
+      padding: 4,
     },
     addBox: {
       borderWidth: 1,
@@ -569,6 +719,25 @@ const createStyles = () => {
       color: secondaryText,
       fontSize: 14,
       textAlign: 'center',
+    },
+    sectionHeader: {
+      color: textColor,
+      fontSize: 18,
+      fontWeight: 'bold',
+      marginTop: 16,
+      marginBottom: 8,
+    },
+    trashCard: {
+      borderRadius: 8,
+      padding: 12,
+      marginBottom: 12,
+    },
+    restoreButton: {
+      marginTop: 8,
+      backgroundColor: '#28a745',
+      padding: 8,
+      borderRadius: 8,
+      alignItems: 'center',
     },
     modalContainer: {
       flex: 1,

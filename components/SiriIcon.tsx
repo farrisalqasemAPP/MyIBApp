@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, Text } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 interface Props {
@@ -12,11 +12,9 @@ export default function SiriIcon({ size = 60 }: Props) {
   const lineHeight = size * 0.02;
 
   const gradientColors = ['#2e1065', '#00008b'];
-  const notebookBackground = '#f5f5f5';
-  const borderColor = '#e0e0e0';
+  const notebookBackground = '#e0f2ff';
+  const borderColor = '#bcd4f6';
   const lineColor = borderColor;
-  const watermarkColor = '#000000';
-  const watermarkOutline = '#ffffff';
 
   return (
     <LinearGradient
@@ -41,44 +39,20 @@ export default function SiriIcon({ size = 60 }: Props) {
           },
         ]}
       >
-        <View
-          style={[
-            styles.line,
-            {
-              top: notebookSize * 0.3,
-              height: lineHeight,
-              borderRadius: lineHeight / 2,
-              backgroundColor: lineColor,
-            },
-          ]}
-        />
-        <View
-          style={[
-            styles.line,
-            {
-              top: notebookSize * 0.55,
-              height: lineHeight,
-              borderRadius: lineHeight / 2,
-              backgroundColor: lineColor,
-            },
-          ]}
-        />
-        <Text
-          style={[
-            styles.watermark,
-            {
-              fontSize: size * 0.15,
-              top: -size * 0.08,
-              left: -size * 0.08,
-              color: watermarkColor,
-              textShadowColor: watermarkOutline,
-              textShadowOffset: { width: 0, height: 0 },
-              textShadowRadius: size * 0.2,
-            },
-          ]}
-        >
-          AI
-        </Text>
+        {Array.from({ length: 5 }).map((_, i) => (
+          <View
+            key={i}
+            style={[
+              styles.line,
+              {
+                top: notebookSize * (0.2 + 0.15 * i),
+                height: lineHeight,
+                borderRadius: lineHeight / 2,
+                backgroundColor: lineColor,
+              },
+            ]}
+          />
+        ))}
       </View>
     </LinearGradient>
   );
@@ -97,10 +71,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: '5%',
     right: '5%',
-  },
-  watermark: {
-    position: 'absolute',
-    fontWeight: 'bold',
   },
 });
 

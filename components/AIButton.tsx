@@ -7,9 +7,16 @@ import SiriIcon from './SiriIcon';
 interface Props {
   bottomOffset?: number;
   size?: number;
+  align?: 'center' | 'right';
+  rightOffset?: number;
 }
 
-export default function AIButton({ bottomOffset = 20, size }: Props) {
+export default function AIButton({
+  bottomOffset = 20,
+  size,
+  align = 'center',
+  rightOffset = 20,
+}: Props) {
   const float = useRef(new Animated.Value(0)).current;
   const pulse = useRef(new Animated.Value(1)).current;
   const [loading, setLoading] = useState(false);
@@ -71,6 +78,9 @@ export default function AIButton({ bottomOffset = 20, size }: Props) {
         style={[
           styles.container,
           { transform: [{ translateY: float }], bottom: bottomOffset },
+          align === 'right'
+            ? { right: rightOffset, alignSelf: 'flex-end' }
+            : { alignSelf: 'center' },
         ]}
       >
         <TouchableOpacity onPress={handlePress}>
@@ -91,7 +101,6 @@ export default function AIButton({ bottomOffset = 20, size }: Props) {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    alignSelf: 'center',
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,

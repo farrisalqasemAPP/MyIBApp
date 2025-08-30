@@ -73,7 +73,7 @@ export default function SiriIcon({ size = 60 }: Props) {
               color: watermarkColor,
               textShadowColor: watermarkOutline,
               textShadowOffset: { width: 0, height: 0 },
-              textShadowRadius: size * 0.05,
+              textShadowRadius: size * 0.15,
             },
           ]}
         >

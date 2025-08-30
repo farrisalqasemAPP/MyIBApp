@@ -434,7 +434,7 @@ export default function NotesScreen() {
                 </TouchableOpacity>
               </View>
             </ScrollView>
-            <AIButton bottomOffset={100} />
+            <AIButton bottomOffset={20} size={40} align="right" />
           </View>
         )}
       </Modal>

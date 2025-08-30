@@ -88,29 +88,11 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="curriculum"
+        name="scholar"
         options={{
-          title: 'Curriculum',
+          title: 'Scholar',
           tabBarIcon: ({ color }) => (
-            <MaterialIcons size={28} name="menu-book" color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="library"
-        options={{
-          title: 'Library',
-          tabBarIcon: ({ color }) => (
-            <MaterialIcons size={28} name="local-library" color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="planner"
-        options={{
-          title: 'Planner',
-          tabBarIcon: ({ color }) => (
-            <MaterialIcons size={28} name="event-note" color={color} />
+            <MaterialIcons size={28} name="library-books" color={color} />
           ),
         }}
       />

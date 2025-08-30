@@ -8,6 +8,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Colors } from '@/constants/Colors';
+import { LinearGradient } from 'expo-linear-gradient';
 
 interface Book {
   key: string;
@@ -38,7 +39,7 @@ export default function LibraryScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <LinearGradient colors={['#6a0dad', '#0000ff']} style={styles.container}>
       <View style={styles.searchRow}>
         <TextInput
           style={styles.input}
@@ -65,14 +66,13 @@ export default function LibraryScreen() {
           </View>
         ))}
       </ScrollView>
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.dark.background,
     padding: 16,
   },
   searchRow: {

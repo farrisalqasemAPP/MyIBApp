@@ -17,6 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { RichEditor, RichToolbar, actions } from 'react-native-pell-rich-editor';
 import RenderHTML from 'react-native-render-html';
 import { useLocalSearchParams } from 'expo-router';
+import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
 import AIButton from '../../components/AIButton';
 import { subjectData, SubjectInfo } from '@/constants/subjects';
 
@@ -305,6 +306,11 @@ export default function NotesScreen() {
     }
   }, [subjectParam, subjects]);
 
+  const subjectsWithAdd = useMemo(
+    () => [...subjects, { key: 'add-subject' } as Subject],
+    [subjects],
+  );
+
   return (
     <LinearGradient
       colors={['#2e1065', '#000000']}
@@ -351,39 +357,53 @@ export default function NotesScreen() {
           ))}
         </ScrollView>
       ) : (
-        <ScrollView contentContainerStyle={styles.grid}>
-          {subjects.map(subject => (
-            <View
-              key={subject.key}
-              style={[styles.box, { backgroundColor: subject.color }]}
-            >
-              <TouchableOpacity
-                style={styles.subjectDeleteIcon}
-                onPress={() => confirmDeleteSubject(subject.key)}
+        <DraggableFlatList
+          data={subjectsWithAdd}
+          keyExtractor={item => item.key}
+          onDragEnd={({ data }) =>
+            setSubjects(data.filter(s => s.key !== 'add-subject'))
+          }
+          renderItem={({ item, drag, isActive }: RenderItemParams<Subject>) => {
+            if (item.key === 'add-subject') {
+              return (
+                <TouchableOpacity
+                  style={[styles.box, styles.addBox]}
+                  onPress={() => setAddSubjectModalVisible(true)}
+                >
+                  <Ionicons name="add" size={32} color={iconColor} />
+                  <Text style={styles.boxTitle}>ADD</Text>
+                </TouchableOpacity>
+              );
+            }
+            return (
+              <View
+                style={[styles.box, { backgroundColor: item.color }]}
               >
-                <Ionicons name="close" size={16} color={iconColor} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.boxContent}
-                onPress={() => openSubject(subject)}
-              >
-                <Ionicons name={subject.icon} size={32} color={iconColor} />
-                <Text style={styles.boxTitle}>{subject.title}</Text>
-                {subject.notes.length > 0 && (
-                  <Text style={styles.boxNote}>{subject.notes.length} notes</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          ))}
-          <TouchableOpacity
-            key="add-subject"
-            style={[styles.box, styles.addBox]}
-            onPress={() => setAddSubjectModalVisible(true)}
-          >
-            <Ionicons name="add" size={32} color={iconColor} />
-            <Text style={styles.boxTitle}>ADD</Text>
-          </TouchableOpacity>
-        </ScrollView>
+                <TouchableOpacity
+                  style={styles.subjectDeleteIcon}
+                  onPress={() => confirmDeleteSubject(item.key)}
+                >
+                  <Ionicons name="close" size={16} color={iconColor} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.boxContent}
+                  onLongPress={drag}
+                  disabled={isActive}
+                  onPress={() => openSubject(item)}
+                >
+                  <Ionicons name={item.icon} size={32} color={iconColor} />
+                  <Text style={styles.boxTitle}>{item.title}</Text>
+                  {item.notes.length > 0 && (
+                    <Text style={styles.boxNote}>{item.notes.length} notes</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            );
+          }}
+          contentContainerStyle={styles.grid}
+          numColumns={2}
+          columnWrapperStyle={{ justifyContent: 'space-between' }}
+        />
       )}
       <AIButton />
 
@@ -690,9 +710,7 @@ const createStyles = () => {
       padding: 4,
     },
     grid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      justifyContent: 'space-between',
+      paddingBottom: 16,
     },
     searchInput: {
       borderColor: inputBorder,

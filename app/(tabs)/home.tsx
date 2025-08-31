@@ -319,8 +319,15 @@ const createStyles = (colors: typeof Colors.dark, width: number) =>
     sectionCard: {
       backgroundColor: colors.card,
       padding: 16,
-      borderRadius: 16,
+      borderRadius: 12,
       marginBottom: 12,
+      borderWidth: 1,
+      borderColor: colors.tint,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
+      elevation: 3,
     },
     sectionTitle: {
       color: colors.text,

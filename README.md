@@ -52,7 +52,7 @@ EXPO_PUBLIC_OPENAI_API_KEY=your_key_here npx expo start
 
 ## Google Sign-In
 
-Google authentication requires OAuth credentials. Provide the client ID when starting the Expo app and both the client ID and secret when running the Express backend:
+Google authentication requires OAuth credentials. Provide the client ID when starting the Expo app (or set it in `app.json` under `extra.googleClientId`) and both the client ID and secret when running the Express backend:
 
 ```bash
 EXPO_PUBLIC_GOOGLE_CLIENT_ID=your_client_id npx expo start

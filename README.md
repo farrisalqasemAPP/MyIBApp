@@ -25,6 +25,8 @@ In the output, you'll find options to open the app in a
 
 You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
 
+The app opens directly to its main interface; no authentication is required.
+
 ## Get a fresh project
 
 When you're ready, run:
@@ -49,18 +51,6 @@ The Tutor tab connects to a ChatGPT-powered assistant focused on the IB system i
 ```bash
 EXPO_PUBLIC_OPENAI_API_KEY=your_key_here npx expo start
 ```
-
-## Google Sign-In
-
-Google authentication requires OAuth credentials. Provide the client ID when starting the Expo app (or set it in `app.json` under `extra.googleClientId`) and both the client ID and secret when running the Express backend:
-
-```bash
-EXPO_PUBLIC_GOOGLE_CLIENT_ID=your_client_id npx expo start
-
-GOOGLE_CLIENT_ID=your_client_id GOOGLE_CLIENT_SECRET=your_client_secret node server.mjs
-```
-
-For convenience, copy `.env.example` to `.env` and fill in your own values.
 
 ## Join the community
 

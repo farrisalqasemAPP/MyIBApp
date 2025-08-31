@@ -9,6 +9,11 @@ app.use(express.urlencoded({ extended: true }));
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 
+if (!CLIENT_ID || !CLIENT_SECRET) {
+  console.error('GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set');
+  process.exit(1);
+}
+
 // The redirect URI MUST exactly match one configured in Google Cloud Console
 // This should point back to the Expo app using a custom scheme.
 const REDIRECT_URI = 'myibapp://auth-callback';

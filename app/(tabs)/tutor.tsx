@@ -28,6 +28,7 @@ export default function TutorScreen() {
       request.url.startsWith('https://auth.openai.com')
     ) {
       Linking.openURL(request.url);
+
       return false;
     }
     return true;

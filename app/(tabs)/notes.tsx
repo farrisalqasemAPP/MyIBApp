@@ -17,7 +17,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { RichEditor, RichToolbar, actions } from 'react-native-pell-rich-editor';
 import RenderHTML from 'react-native-render-html';
 import { useLocalSearchParams } from 'expo-router';
-import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
+import DraggableFlatList, {
+  RenderItemParams,
+} from 'react-native-draggable-flatlist'; // eslint-disable-line import/no-unresolved
 import AIButton from '../../components/AIButton';
 import { subjectData, SubjectInfo } from '@/constants/subjects';
 
@@ -27,7 +29,7 @@ type Note = {
   text: string;
   color: string;
   date: string;
-  images: string[];
+  images?: string[];
 };
 
 type Subject = SubjectInfo & {
@@ -169,7 +171,12 @@ export default function NotesScreen() {
     );
     setDeletedNotes(prev => [
       ...prev,
-      { ...noteToDelete, subjectKey: active.key, subjectTitle: active.title },
+      {
+        ...noteToDelete,
+        images: noteToDelete.images || [],
+        subjectKey: active.key,
+        subjectTitle: active.title,
+      },
     ]);
   };
 
@@ -196,6 +203,7 @@ export default function NotesScreen() {
       ...prev,
       ...subjectToDelete.notes.map(n => ({
         ...n,
+        images: n.images || [],
         subjectKey: subjectToDelete.key,
         subjectTitle: subjectToDelete.title,
       })),
@@ -225,9 +233,13 @@ export default function NotesScreen() {
     if (!note) return;
     const subjectExists = subjects.find(s => s.key === note.subjectKey);
     if (!subjectExists) return;
-    const { subjectKey, subjectTitle, ...rest } = note;
+    const { subjectKey, subjectTitle, images: restoredImages, ...rest } = note;
     setSubjects(prev =>
-      prev.map(s => (s.key === subjectKey ? { ...s, notes: [...s.notes, rest] } : s)),
+      prev.map(s =>
+        s.key === subjectKey
+          ? { ...s, notes: [...s.notes, { ...rest, images: restoredImages || [] }] }
+          : s,
+      ),
     );
     setDeletedNotes(prev => prev.filter(n => n.id !== id));
   };
@@ -250,7 +262,7 @@ export default function NotesScreen() {
     if (!currentNote) return;
     setCurrentNote({
       ...currentNote,
-      images: currentNote.images.filter((_, i) => i !== index),
+      images: currentNote.images?.filter((_, i) => i !== index) || [],
     });
   };
 
@@ -543,7 +555,7 @@ export default function NotesScreen() {
                       baseStyle={styles.noteText}
                       defaultTextProps={{ numberOfLines: 3, ellipsizeMode: 'tail' }}
                     />
-                    {note.images.length > 0 && (
+                    {note.images?.length ? (
                       note.images.length === 1 ? (
                         <Image
                           source={{ uri: note.images[0] }}
@@ -555,7 +567,7 @@ export default function NotesScreen() {
                           <Ionicons name="images" size={20} color={iconColor} />
                         </View>
                       )
-                    )}
+                    ) : null}
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.deleteIcon}
@@ -604,7 +616,7 @@ export default function NotesScreen() {
                 selectedIconTint={iconColor}
                 style={styles.formatBar}
               />
-              {currentNote.images.map((img, idx) => (
+              {currentNote.images?.map((img, idx) => (
                 <View key={img + idx} style={styles.imageContainer}>
                   <Image
                     source={{ uri: img }}

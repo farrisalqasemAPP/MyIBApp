@@ -8,8 +8,11 @@ import {
   Modal,
   Switch,
   useWindowDimensions,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Linking from 'expo-linking';
+import * as WebBrowser from 'expo-web-browser';
 
 import AIButton from '@/components/AIButton';
 import { Colors } from '@/constants/Colors';
@@ -73,11 +76,36 @@ export default function HomeScreen() {
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [isLightMode, setIsLightMode] = useState(false);
   const [activeCard, setActiveCard] = useState(0);
+  const [authToken, setAuthToken] = useState<string | null>(null);
 
   const theme = isLightMode ? Colors.light : Colors.dark;
   const { width } = useWindowDimensions();
   const scrollRef = useRef<ScrollView>(null);
   const styles = useMemo(() => createStyles(theme, width), [theme, width]);
+
+  const handleGoogleSignIn = async () => {
+    try {
+      const result = await WebBrowser.openAuthSessionAsync(
+        'http://localhost:3000/auth/google',
+        'myibapp://auth-callback',
+      );
+      if (result.type === 'success' && result.url) {
+        const { queryParams } = Linking.parse(result.url);
+        if (queryParams?.code) {
+          const response = await fetch('http://localhost:3000/auth/google/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ code: String(queryParams.code) }).toString(),
+          });
+          const data = await response.json();
+          setAuthToken(data.access_token);
+          Alert.alert('Logged in', 'Google sign-in successful');
+        }
+      }
+    } catch {
+      Alert.alert('Error', 'Failed to sign in with Google');
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -91,6 +119,13 @@ export default function HomeScreen() {
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Clarity</Text>
         </View>
+
+        <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignIn}>
+          <Text style={styles.googleButtonText}>Sign in with Google</Text>
+        </TouchableOpacity>
+        {authToken && (
+          <Text style={styles.loggedInText}>Logged in</Text>
+        )}
 
         <ScrollView
           ref={scrollRef}
@@ -236,6 +271,23 @@ const createStyles = (colors: typeof Colors.dark, width: number) =>
       fontSize: 22,
       fontWeight: 'bold',
       marginLeft: 8,
+    },
+    googleButton: {
+      backgroundColor: '#4285F4',
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+      borderRadius: 4,
+      alignSelf: 'center',
+      marginTop: 20,
+    },
+    googleButtonText: {
+      color: '#fff',
+      fontWeight: '600',
+    },
+    loggedInText: {
+      color: colors.text,
+      textAlign: 'center',
+      marginTop: 10,
     },
     cardCarousel: {
       marginTop: 20,

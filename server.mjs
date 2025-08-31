@@ -3,13 +3,15 @@ import fetch from 'node-fetch';
 import crypto from 'node:crypto';
 
 const app = express();
+app.use(express.urlencoded({ extended: true }));
 
 // Your Google client ID/secret
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 
 // The redirect URI MUST exactly match one configured in Google Cloud Console
-const REDIRECT_URI = 'https://auth.openai.com/api/accounts/callback/google';
+// This should point back to the Expo app using a custom scheme.
+const REDIRECT_URI = 'myibapp://auth-callback';
 
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
@@ -32,14 +34,14 @@ app.get('/auth/google', (req, res) => {
   res.redirect(url.toString());
 });
 
-// Step 2: handle the callback and exchange code for tokens
-app.get('/api/accounts/callback/google', async (req, res) => {
-  const { code } = req.query;
+// Step 2: exchange authorization code for tokens
+app.post('/auth/google/token', async (req, res) => {
+  const { code } = req.body;
   const resp = await fetch(GOOGLE_TOKEN_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
-      code: code,
+      code,
       client_id: CLIENT_ID,
       client_secret: CLIENT_SECRET,
       redirect_uri: REDIRECT_URI,

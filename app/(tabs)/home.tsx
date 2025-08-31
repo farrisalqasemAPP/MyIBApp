@@ -10,7 +10,6 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 
 import AIButton from '@/components/AIButton';
 import { Colors } from '@/constants/Colors';
@@ -32,6 +31,39 @@ const cardData = [
     title: 'AI feedback',
     description: 'Get insights and feedback from the AI.',
     icon: 'chatbubbles-outline' as const,
+  },
+];
+
+const overviewSections = [
+  {
+    title: 'Subject Home',
+    description:
+      "Snapshot of this week's unit, key resources, upcoming deadlines, quick links.",
+  },
+  {
+    title: 'Syllabus & Units',
+    description:
+      'Unit map with aims, assessment objectives (HL/SL), command terms.',
+  },
+  {
+    title: 'Library & Lessons',
+    description:
+      'Curated resources for the subject: PDFs, slides, videos, open-library books; filter by unit/level/language.',
+  },
+  {
+    title: 'Assignments & Submissions',
+    description:
+      'Briefs, rubrics, submit files, status (assigned/submitted/graded).',
+  },
+  {
+    title: 'Practice & Question Bank',
+    description:
+      'Past-style questions, auto-generated drills, step-by-step solutions, difficulty filters.',
+  },
+  {
+    title: 'Results & Feedback',
+    description:
+      'Grades by unit/AO, teacher comments, targets, progress analytics.',
   },
 ];
 
@@ -114,18 +146,14 @@ export default function HomeScreen() {
           <Text style={styles.sectionSub}>Overview</Text>
         </View>
 
-        <TouchableOpacity
-          style={styles.notesButton}
-          onPress={() => router.push(`/notes?subject=${selectedSubject.key}`)}
-        >
-          <Text style={styles.notesButtonText}>
-            Go to {selectedSubject.title} Notes
-          </Text>
-        </TouchableOpacity>
-
-        <View style={styles.grid}>
-          {Array.from({ length: 8 }).map((_, index) => (
-            <View key={index} style={styles.tile} />
+        <View style={styles.sectionList}>
+          {overviewSections.map(section => (
+            <View key={section.title} style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>{section.title}</Text>
+              <Text style={styles.sectionDescription}>
+                {section.description}
+              </Text>
+            </View>
           ))}
         </View>
       </ScrollView>
@@ -285,28 +313,23 @@ const createStyles = (colors: typeof Colors.dark, width: number) =>
       fontWeight: '600',
       fontSize: 16,
     },
-    grid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      justifyContent: 'space-between',
+    sectionList: {
+      marginBottom: 20,
     },
-    tile: {
-      width: '48%',
-      aspectRatio: 1,
-      backgroundColor: colors.card,
-      borderRadius: 12,
-      marginBottom: 16,
-    },
-    notesButton: {
+    sectionCard: {
       backgroundColor: colors.card,
       padding: 16,
       borderRadius: 16,
-      alignItems: 'center',
-      marginBottom: 20,
+      marginBottom: 12,
     },
-    notesButtonText: {
+    sectionTitle: {
       color: colors.text,
       fontWeight: '600',
+      marginBottom: 4,
+    },
+    sectionDescription: {
+      color: colors.text,
+      fontSize: 12,
     },
     modalOverlay: {
       flex: 1,

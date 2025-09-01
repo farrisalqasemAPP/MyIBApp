@@ -19,10 +19,10 @@ import RenderHTML from 'react-native-render-html';
 import { useLocalSearchParams } from 'expo-router';
 import DraggableFlatList, {
   RenderItemParams,
-} from 'react-native-draggable-flatlist';
+} from 'react-native-draggable-flatlist'; // eslint-disable-line import/no-unresolved
 import AIButton from '../../components/AIButton';
 import { subjectData, SubjectInfo } from '@/constants/subjects';
-import AsyncStorage from '@react-native-async-storage/async-storage'; // eslint-disable-line import/no-unresolved
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type Note = {
   id: string;
@@ -438,11 +438,7 @@ export default function NotesScreen() {
       )}
       <AIButton />
 
-      <Modal
-        visible={trashModalVisible}
-        animationType="slide"
-        onRequestClose={() => setTrashModalVisible(false)}
-      >
+      <Modal visible={trashModalVisible} animationType="slide">
         <View style={styles.modalContainer}>
           <Text style={styles.modalTitle}>Trash</Text>
           <ScrollView contentContainerStyle={styles.modalContent}>
@@ -498,11 +494,7 @@ export default function NotesScreen() {
         </View>
       </Modal>
 
-      <Modal
-        visible={addSubjectModalVisible}
-        animationType="slide"
-        onRequestClose={() => setAddSubjectModalVisible(false)}
-      >
+      <Modal visible={addSubjectModalVisible} animationType="slide">
         <View style={styles.addSubjectContainer}>
           <Text style={styles.modalTitle}>Add Subject</Text>
           <TextInput
@@ -539,11 +531,7 @@ export default function NotesScreen() {
         </View>
       </Modal>
 
-      <Modal
-        visible={!!active}
-        animationType="slide"
-        onRequestClose={closeSubject}
-      >
+      <Modal visible={!!active} animationType="slide">
         {active && (
           <View style={styles.modalContainer}>
             <View style={[styles.modalHeader, { backgroundColor: active.color }]}> 
@@ -621,11 +609,7 @@ export default function NotesScreen() {
         )}
       </Modal>
 
-      <Modal
-        visible={noteModalVisible}
-        animationType="slide"
-        onRequestClose={closeNote}
-      >
+      <Modal visible={noteModalVisible} animationType="slide">
         {currentNote && (
           <View style={styles.noteModalContainer}>
             <Text style={styles.noteDate}>{currentNote.date}</Text>

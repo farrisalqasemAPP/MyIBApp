@@ -53,7 +53,10 @@ type Note = {
 
 const NOTES_FILE = `${FileSystem.documentDirectory}notes.json`;
 
-const GRADIENT_COLORS = ['#4b1e7e', '#00081f'];
+const GRADIENTS: Record<string, string[]> = {
+  dark: ['#4b1e7e', '#00081f'],
+  light: ['#e0e7ff', '#f8fafc'],
+};
 
 // Simple utility to strip HTML tags for previews/search.
 const stripHtml = (html: string) => html.replace(/<[^>]+>/g, '');
@@ -78,6 +81,8 @@ export default function NotesScreen() {
     'History',
     'Art',
   ]);
+  // Provide a broader color palette when creating new sections so users
+  // can more easily distinguish them.
   const colorChoices = [
     '#7c3aed',
     '#2563eb',
@@ -89,6 +94,16 @@ export default function NotesScreen() {
     '#0ea5e9',
     '#f97316',
     '#84cc16',
+    '#fb7185',
+    '#10b981',
+    '#3b82f6',
+    '#8b5cf6',
+    '#f43f5e',
+    '#14b8a6',
+    '#fbbf24',
+    '#a3e635',
+    '#6366f1',
+    '#ec4899',
   ];
   const [selectedColor, setSelectedColor] = useState(colorChoices[0]);
   const defaultColors: Record<string, string> = {
@@ -110,16 +125,25 @@ export default function NotesScreen() {
   };
 
   const removeSubject = (subject: string) => {
-    setSubjects(prev => prev.filter(s => s !== subject));
-    setSubjectColors(prev => {
-      const updated = { ...prev };
-      delete updated[subject];
-      return updated;
-    });
-    setNotes(prev => prev.filter(n => n.subject !== subject));
-    if (currentSubject === subject) {
-      setCurrentSubject(null);
-    }
+    Alert.alert('Delete', 'Are you sure you want to delete this subject?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          setSubjects(prev => prev.filter(s => s !== subject));
+          setSubjectColors(prev => {
+            const updated = { ...prev };
+            delete updated[subject];
+            return updated;
+          });
+          setNotes(prev => prev.filter(n => n.subject !== subject));
+          if (currentSubject === subject) {
+            setCurrentSubject(null);
+          }
+        },
+      },
+    ]);
   };
 
   const performSearch = () => {
@@ -210,13 +234,18 @@ export default function NotesScreen() {
   };
 
   const deleteNote = (id: string) => {
-    Alert.alert('Delete', 'Are you sure you want to delete this subject?', [
+    Alert.alert('Delete', 'Are you sure you want to delete this note?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
         style: 'destructive',
-        onPress: () =>
-          setNotes(prev => prev.filter(n => n.id !== id)),
+        onPress: () => {
+          setNotes(prev => prev.filter(n => n.id !== id));
+          if (current?.id === id) {
+            setModalVisible(false);
+            setCurrent(null);
+          }
+        },
       },
     ]);
   };
@@ -239,7 +268,7 @@ export default function NotesScreen() {
   };
 
   return (
-    <LinearGradient colors={GRADIENT_COLORS} style={styles.gradient}>
+    <LinearGradient colors={GRADIENTS[colorScheme]} style={styles.gradient}>
       <SafeAreaView style={styles.container}>
         <Text style={[styles.logo, { color: theme.text }]}>CLARITY</Text>
         <TextInput
@@ -390,7 +419,7 @@ export default function NotesScreen() {
           </View>
         )}
         <Modal visible={modalVisible} animationType="none">
-          <LinearGradient colors={GRADIENT_COLORS} style={{ flex: 1 }}>
+          <LinearGradient colors={GRADIENTS[colorScheme]} style={{ flex: 1 }}>
             <SafeAreaView style={styles.modalContainer}>
               <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -445,6 +474,14 @@ export default function NotesScreen() {
                   </View>
                 </ScrollView>
                 <View style={styles.editorButtons}>
+                  {current && notes.some(n => n.id === current.id) && (
+                    <TouchableOpacity
+                      onPress={() => deleteNote(current.id)}
+                      style={styles.deleteBtn}
+                    >
+                      <Text style={styles.btnText}>Delete</Text>
+                    </TouchableOpacity>
+                  )}
                   <TouchableOpacity
                     onPress={() => {
                       setModalVisible(false);
@@ -454,7 +491,10 @@ export default function NotesScreen() {
                   >
                     <Text style={styles.btnText}>Cancel</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={saveCurrent} style={styles.saveBtn}>
+                  <TouchableOpacity
+                    onPress={saveCurrent}
+                    style={[styles.saveBtn, { backgroundColor: theme.tint }]}
+                  >
                     <Text style={styles.btnText}>Save</Text>
                   </TouchableOpacity>
                 </View>
@@ -675,9 +715,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 16,
   },
-  cancelBtn: {
+  deleteBtn: {
     padding: 12,
     backgroundColor: '#dc2626',
+    borderRadius: 8,
+    flex: 1,
+    marginRight: 8,
+    alignItems: 'center',
+  },
+  cancelBtn: {
+    padding: 12,
+    backgroundColor: '#4b5563',
     borderRadius: 8,
     flex: 1,
     marginRight: 8,
@@ -714,6 +762,7 @@ const styles = StyleSheet.create({
   },
   colorRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     marginBottom: 12,
   },
   colorOption: {
@@ -721,6 +770,7 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     marginRight: 8,
+    marginBottom: 8,
   },
 });
 

@@ -30,6 +30,7 @@ type Note = {
   color: string;
   date: string;
   images?: string[];
+  pinned?: boolean;
 };
 
 type Subject = SubjectInfo & {
@@ -80,17 +81,19 @@ export default function NotesScreen() {
   const stripHtml = (html: string) => html.replace(/<[^>]+>/g, '');
   const filteredNotes = useMemo(
     () =>
-      subjects.flatMap(s =>
-        s.notes
-          .filter(n => {
-            const q = searchQuery.toLowerCase();
-            return (
-              n.title.toLowerCase().includes(q) ||
-              stripHtml(n.text).toLowerCase().includes(q)
-            );
-          })
-          .map(n => ({ subject: s, note: n })),
-      ),
+      subjects
+        .flatMap(s =>
+          s.notes
+            .filter(n => {
+              const q = searchQuery.toLowerCase();
+              return (
+                n.title.toLowerCase().includes(q) ||
+                stripHtml(n.text).toLowerCase().includes(q)
+              );
+            })
+            .map(n => ({ subject: s, note: n })),
+        )
+        .sort((a, b) => Number(b.note.pinned) - Number(a.note.pinned)),
     [subjects, searchQuery],
   );
 
@@ -108,6 +111,7 @@ export default function NotesScreen() {
       setCurrentNote({
         ...note,
         images: note.images || [],
+        pinned: note.pinned ?? false,
       });
     } else {
       setCurrentNote({
@@ -117,6 +121,7 @@ export default function NotesScreen() {
         color: active?.color || colorOptions[0],
         date: new Date().toLocaleDateString(),
         images: [],
+        pinned: false,
       });
     }
     setShowNoteColors(false);
@@ -150,6 +155,32 @@ export default function NotesScreen() {
             notes: prev.notes.some(n => n.id === note.id)
               ? prev.notes.map(n => (n.id === note.id ? note : n))
               : [...prev.notes, note],
+          }
+        : prev,
+    );
+  };
+
+  const togglePinNote = (id: string) => {
+    if (!active) return;
+    setSubjects(prev =>
+      prev.map(s =>
+        s.key === active.key
+          ? {
+              ...s,
+              notes: s.notes.map(n =>
+                n.id === id ? { ...n, pinned: !n.pinned } : n,
+              ),
+            }
+          : s,
+      ),
+    );
+    setActive(prev =>
+      prev && prev.key === active.key
+        ? {
+            ...prev,
+            notes: prev.notes.map(n =>
+              n.id === id ? { ...n, pinned: !n.pinned } : n,
+            ),
           }
         : prev,
     );
@@ -355,7 +386,10 @@ export default function NotesScreen() {
                 openNote(note);
               }}
             >
-              <Text style={styles.noteTitle}>{note.title}</Text>
+              <Text style={styles.noteTitle}>
+                {note.title}
+                {note.pinned ? ' \u2605' : ''}
+              </Text>
               <Text style={styles.noteDate}>
                 {note.date} - {subject.title}
               </Text>
@@ -541,7 +575,10 @@ export default function NotesScreen() {
                   ))}
                 </View>
               )}
-              {active.notes.map(note => (
+              {active.notes
+                .slice()
+                .sort((a, b) => Number(b.pinned) - Number(a.pinned))
+                .map(note => (
                 <View
                   key={note.id}
                   style={[styles.noteCard, { backgroundColor: note.color }]}
@@ -569,12 +606,24 @@ export default function NotesScreen() {
                       )
                     ) : null}
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.deleteIcon}
-                    onPress={() => confirmDeleteNote(note.id)}
-                  >
-                    <Ionicons name="trash" size={20} color={iconColor} />
-                  </TouchableOpacity>
+                  <View style={styles.noteActions}>
+                    <TouchableOpacity
+                      style={styles.pinIcon}
+                      onPress={() => togglePinNote(note.id)}
+                    >
+                      <Ionicons
+                        name={note.pinned ? 'star' : 'star-outline'}
+                        size={20}
+                        color={iconColor}
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.deleteIcon}
+                      onPress={() => confirmDeleteNote(note.id)}
+                    >
+                      <Ionicons name="trash" size={20} color={iconColor} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               ))}
               <TouchableOpacity style={styles.addButton} onPress={() => openNote()}>
@@ -660,6 +709,16 @@ export default function NotesScreen() {
                 </View>
               )}
               <View style={styles.noteModalButtons}>
+                <TouchableOpacity
+                  style={styles.pinButton}
+                  onPress={() =>
+                    setCurrentNote({ ...currentNote, pinned: !currentNote.pinned })
+                  }
+                >
+                  <Text style={styles.saveButtonText}>
+                    {currentNote.pinned ? 'Unpin' : 'Pin'}
+                  </Text>
+                </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.saveButton}
                   onPress={() => {
@@ -847,8 +906,16 @@ const createStyles = () => {
       textAlign: 'left',
       marginBottom: 4,
     },
-    deleteIcon: {
+    noteActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
       marginLeft: 8,
+    },
+    pinIcon: {
+      marginRight: 8,
+      justifyContent: 'center',
+    },
+    deleteIcon: {
       justifyContent: 'center',
     },
     addButton: {
@@ -950,6 +1017,11 @@ const createStyles = () => {
     },
     saveButton: {
       backgroundColor: '#2e1065',
+      padding: 16,
+      borderRadius: 8,
+    },
+    pinButton: {
+      backgroundColor: '#ffc107',
       padding: 16,
       borderRadius: 8,
     },

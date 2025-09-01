@@ -41,6 +41,8 @@ type Subject = SubjectInfo & {
 
 type TrashNote = Note & { subjectKey: string; subjectTitle: string };
 
+type GridSubject = Subject | { key: string; empty: true };
+
 const colorOptions = [
   '#3b2e7e',
   '#6a0dad',
@@ -60,6 +62,10 @@ const initialSubjects: Subject[] = subjectData.map(s => ({ ...s, notes: [] }));
 
 export default function NotesScreen() {
   const [subjects, setSubjects] = useState<Subject[]>(initialSubjects);
+  const [gridOrder, setGridOrder] = useState<(string | null)[]>(() => [
+    ...initialSubjects.map(s => s.key),
+    null,
+  ]);
   const [active, setActive] = useState<Subject | null>(null);
   const [noteModalVisible, setNoteModalVisible] = useState(false);
   const [currentNote, setCurrentNote] = useState<Note | null>(null);
@@ -78,6 +84,15 @@ export default function NotesScreen() {
   const richText = useRef<RichEditor>(null);
   const { width } = useWindowDimensions();
   const { subject: subjectParam } = useLocalSearchParams<{ subject?: string }>();
+
+  const gridData = useMemo<GridSubject[]>(
+    () =>
+      gridOrder.map((key, idx) => {
+        const subject = subjects.find(s => s.key === key);
+        return subject ? subject : { key: `empty-${idx}`, empty: true };
+      }),
+    [gridOrder, subjects],
+  );
 
   const stripHtml = (html: string) => html.replace(/<[^>]+>/g, '');
   const filteredNotes = useMemo(
@@ -200,6 +215,10 @@ export default function NotesScreen() {
     const subjectToDelete = subjects.find(s => s.key === key);
     if (!subjectToDelete) return;
     setSubjects(prev => prev.filter(s => s.key !== key));
+    setGridOrder(prev => {
+      const next = prev.map(k => (k === key ? null : k));
+      return next.includes(null) ? next : [...next, null];
+    });
     setDeletedSubjects(prev => [...prev, subjectToDelete]);
     setDeletedNotes(prev => [
       ...prev,
@@ -228,6 +247,17 @@ export default function NotesScreen() {
     setDeletedSubjects(prev => prev.filter(s => s.key !== key));
     setDeletedNotes(prev => prev.filter(n => n.subjectKey !== key));
     setSubjects(prev => [...prev, subject]);
+    setGridOrder(prev => {
+      const emptyIndex = prev.findIndex(k => k === null);
+      const next = [...prev];
+      if (emptyIndex !== -1) {
+        next[emptyIndex] = subject.key;
+      } else {
+        next.push(subject.key);
+      }
+      if (!next.includes(null)) next.push(null);
+      return next;
+    });
   };
 
   const restoreNote = (id: string) => {
@@ -303,6 +333,17 @@ export default function NotesScreen() {
       ...(info ? { info } : {}),
     };
     setSubjects(prev => [...prev, newSubject]);
+    setGridOrder(prev => {
+      const emptyIndex = prev.findIndex(k => k === null);
+      const next = [...prev];
+      if (emptyIndex !== -1) {
+        next[emptyIndex] = newSubject.key;
+      } else {
+        next.push(newSubject.key);
+      }
+      if (!next.includes(null)) next.push(null);
+      return next;
+    });
     setAddSubjectModalVisible(false);
     setNewSubjectTitle('');
     setNewSubjectColor(colorOptions[0]);
@@ -324,7 +365,7 @@ export default function NotesScreen() {
     item,
     drag,
     isActive,
-  }: RenderItemParams<Subject>) => {
+  }: RenderItemParams<GridSubject>) => {
     const shake = useRef(new Animated.Value(0)).current;
     useEffect(() => {
       if (isActive) {
@@ -362,15 +403,16 @@ export default function NotesScreen() {
       ],
     } as const;
 
-    if (item.key === 'add-subject') {
+    if ('empty' in item) {
       return (
-        <TouchableOpacity
-          style={[styles.box, styles.addBox]}
-          onPress={() => setAddSubjectModalVisible(true)}
-        >
-          <Ionicons name="add" size={32} color={iconColor} />
-          <Text style={styles.boxTitle}>ADD</Text>
-        </TouchableOpacity>
+        <View style={[styles.box, styles.emptyBox]}>
+          <TouchableOpacity
+            style={styles.boxContent}
+            onPress={() => setAddSubjectModalVisible(true)}
+          >
+            <Ionicons name="add" size={32} color={iconColor} />
+          </TouchableOpacity>
+        </View>
       );
     }
 
@@ -486,11 +528,6 @@ export default function NotesScreen() {
     );
   };
 
-  const subjectsWithAdd = useMemo(
-    () => [...subjects, { key: 'add-subject' } as Subject],
-    [subjects],
-  );
-
   return (
     <LinearGradient
       colors={['#2e1065', '#000000']}
@@ -538,15 +575,29 @@ export default function NotesScreen() {
         </ScrollView>
       ) : (
         <DraggableFlatList
-          data={subjectsWithAdd}
+          data={gridData}
           keyExtractor={item => item.key}
-          onDragEnd={({ data }) =>
-            setSubjects(data.filter(s => s.key !== 'add-subject'))
-          }
+          onDragEnd={({ from, to }) => {
+            setGridOrder(prev => {
+              const next = [...prev];
+              const moved = next[from];
+              next[from] = null;
+              if (next[to] === null) {
+                next[to] = moved;
+              } else {
+                const emptyIndex = next.findIndex(k => k === null);
+                if (emptyIndex !== -1) {
+                  next[emptyIndex] = next[to];
+                }
+                next[to] = moved;
+              }
+              if (!next.includes(null)) next.push(null);
+              return next;
+            });
+          }}
           renderItem={SubjectGridItem}
           contentContainerStyle={styles.grid}
           numColumns={2}
-          columnWrapperStyle={{ justifyContent: 'space-between' }}
         />
       )}
       <AIButton />
@@ -835,6 +886,10 @@ const createStyles = () => {
     },
     grid: {
       paddingBottom: 16,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      borderWidth: 1,
+      borderColor: inputBorder,
     },
     searchInput: {
       borderColor: inputBorder,
@@ -848,10 +903,10 @@ const createStyles = () => {
       paddingBottom: 16,
     },
     box: {
-      width: '48%',
-      borderRadius: 12,
+      width: '50%',
+      borderWidth: 1,
+      borderColor: inputBorder,
       padding: 16,
-      marginBottom: 12,
       alignItems: 'center',
       position: 'relative',
     },
@@ -864,7 +919,7 @@ const createStyles = () => {
       right: 4,
       padding: 4,
     },
-    addBox: {
+    emptyBox: {
       borderWidth: 1,
       borderColor: inputBorder,
       backgroundColor: 'transparent',

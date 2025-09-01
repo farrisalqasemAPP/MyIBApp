@@ -150,12 +150,7 @@ export default function HomeScreen() {
 
         <View style={styles.sectionList}>
           {overviewSections.map(section => (
-            <View key={section.title} style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>{section.title}</Text>
-              <Text style={styles.sectionDescription}>
-                {section.description}
-              </Text>
-            </View>
+            <View key={section.title} style={styles.sectionCard} />
           ))}
         </View>
       </ScrollView>

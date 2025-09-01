@@ -15,7 +15,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,8 +26,6 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '@/constants/Colors';
-import { useThemeContext } from '@/context/ThemeContext';
 
 type Attachment = {
   id: string;
@@ -59,8 +56,6 @@ const GRADIENT_COLORS = ['#4b1e7e', '#00081f'];
 const stripHtml = (html: string) => html.replace(/<[^>]+>/g, '');
 
 export default function NotesScreen() {
-  const { colorScheme } = useThemeContext();
-  const theme = Colors[colorScheme];
   const [notes, setNotes] = useState<Note[]>([]);
   const [query, setQuery] = useState('');
   const [current, setCurrent] = useState<Note | null>(null);
@@ -90,7 +85,6 @@ export default function NotesScreen() {
     '#f97316',
     '#84cc16',
   ];
-  const [selectedColor, setSelectedColor] = useState(colorChoices[0]);
   const defaultColors: Record<string, string> = {
     Math: '#7c3aed',
     English: '#2563eb',
@@ -210,15 +204,7 @@ export default function NotesScreen() {
   };
 
   const deleteNote = (id: string) => {
-    Alert.alert('Delete', 'Are you sure you want to delete this subject?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () =>
-          setNotes(prev => prev.filter(n => n.id !== id)),
-      },
-    ]);
+    setNotes(prev => prev.filter(n => n.id !== id));
   };
 
   const addImage = async () => {
@@ -241,17 +227,14 @@ export default function NotesScreen() {
   return (
     <LinearGradient colors={GRADIENT_COLORS} style={styles.gradient}>
       <SafeAreaView style={styles.container}>
-        <Text style={[styles.logo, { color: theme.text }]}>CLARITY</Text>
+        <Text style={styles.logo}>CLARITY</Text>
         <TextInput
           placeholder="Search notes"
           placeholderTextColor="#888"
           value={query}
           onChangeText={setQuery}
           onSubmitEditing={performSearch}
-          style={[
-            styles.search,
-            { backgroundColor: theme.card, color: theme.text },
-          ]}
+          style={styles.search}
         />
         {searchMode ? (
           <View style={{ flex: 1 }}>
@@ -262,9 +245,9 @@ export default function NotesScreen() {
                   setQuery('');
                 }}
               >
-                <Ionicons name="arrow-back" size={24} color={theme.text} />
+                <Ionicons name="arrow-back" size={24} color="#fff" />
               </TouchableOpacity>
-              <Text style={[styles.selectedTitle, { color: theme.text }]}>Results</Text>
+              <Text style={styles.selectedTitle}>Results</Text>
             </View>
             <FlatList
               data={results}
@@ -272,21 +255,14 @@ export default function NotesScreen() {
               contentContainerStyle={{ padding: 16 }}
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  style={[styles.noteCard, { backgroundColor: theme.card }]}
+                  style={styles.noteCard}
                   onPress={() => openEdit(item)}
                 >
-                  <Text style={[styles.noteTitle, { color: theme.text }]}>
-                    {item.title || 'Untitled'}
-                  </Text>
-                  <Text
-                    numberOfLines={2}
-                    style={[styles.notePreview, { color: theme.text }]}
-                  >
+                  <Text style={styles.noteTitle}>{item.title || 'Untitled'}</Text>
+                  <Text numberOfLines={2} style={styles.notePreview}>
                     {stripHtml(item.content)}
                   </Text>
-                  <Text style={[styles.resultSubject, { color: theme.text }]}> 
-                    {item.subject}
-                  </Text>
+                  <Text style={styles.resultSubject}>{item.subject}</Text>
                 </TouchableOpacity>
               )}
             />
@@ -300,9 +276,9 @@ export default function NotesScreen() {
                   setQuery('');
                 }}
               >
-                <Ionicons name="arrow-back" size={24} color={theme.text} />
+                <Ionicons name="arrow-back" size={24} color="#fff" />
               </TouchableOpacity>
-              <Text style={[styles.selectedTitle, { color: theme.text }]}>{currentSubject}</Text>
+              <Text style={styles.selectedTitle}>{currentSubject}</Text>
             </View>
             <FlatList
               data={filtered.sort((a, b) => b.updatedAt - a.updatedAt)}
@@ -310,17 +286,12 @@ export default function NotesScreen() {
               contentContainerStyle={{ padding: 16 }}
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  style={[styles.noteCard, { backgroundColor: theme.card }]}
+                  style={styles.noteCard}
                   onPress={() => openEdit(item)}
                   onLongPress={() => deleteNote(item.id)}
                 >
-                  <Text style={[styles.noteTitle, { color: theme.text }]}>
-                    {item.title || 'Untitled'}
-                  </Text>
-                  <Text
-                    numberOfLines={2}
-                    style={[styles.notePreview, { color: theme.text }]}
-                  >
+                  <Text style={styles.noteTitle}>{item.title || 'Untitled'}</Text>
+                  <Text numberOfLines={2} style={styles.notePreview}>
                     {stripHtml(item.content)}
                   </Text>
                 </TouchableOpacity>
@@ -344,10 +315,7 @@ export default function NotesScreen() {
                     <TouchableOpacity
                       key="ADD"
                       style={[styles.subjectCube, styles.addCube]}
-                      onPress={() => {
-                        setSelectedColor(colorChoices[0]);
-                        setAddingSubject(true);
-                      }}
+                      onPress={() => setAddingSubject(true)}
                     >
                       <Ionicons name="add" size={24} color="#fff" />
                       <Text style={styles.subjectText}>ADD</Text>
@@ -399,8 +367,7 @@ export default function NotesScreen() {
                 <ScrollView contentContainerStyle={{ padding: 16 }}>
                   <TextInput
                     placeholder="Title"
-                    placeholderTextColor="#888"
-                    style={[styles.titleInput, { backgroundColor: theme.card, color: theme.text }]}
+                    style={styles.titleInput}
                     value={current?.title}
                     onChangeText={t =>
                       setCurrent(c => (c ? { ...c, title: t } : c))
@@ -408,7 +375,7 @@ export default function NotesScreen() {
                   />
                   <RichEditor
                     ref={editorRef}
-                    style={[styles.editor, { backgroundColor: theme.card, color: theme.text }]}
+                    style={styles.editor}
                     initialContentHTML={current?.content}
                     placeholder="Start writing..."
                     onChange={html =>
@@ -438,9 +405,9 @@ export default function NotesScreen() {
                     ))}
                     <TouchableOpacity
                       onPress={addImage}
-                      style={[styles.addAttachment, { backgroundColor: theme.card }]}
+                      style={styles.addAttachment}
                     >
-                      <Text style={{ fontSize: 32, color: theme.text }}>+</Text>
+                      <Text style={{ fontSize: 32 }}>+</Text>
                     </TouchableOpacity>
                   </View>
                 </ScrollView>
@@ -464,27 +431,10 @@ export default function NotesScreen() {
         </Modal>
         <Modal visible={addingSubject} transparent animationType="fade">
           <View style={styles.addModal}>
-            <View style={[styles.addModalContent, { backgroundColor: theme.card }]}> 
-              <View style={styles.colorRow}>
-                {colorChoices.map(c => (
-                  <TouchableOpacity
-                    key={c}
-                    style={[
-                      styles.colorOption,
-                      {
-                        backgroundColor: c,
-                        borderColor: theme.text,
-                        borderWidth: selectedColor === c ? 2 : 0,
-                      },
-                    ]}
-                    onPress={() => setSelectedColor(c)}
-                  />
-                ))}
-              </View>
+            <View style={styles.addModalContent}>
               <TextInput
                 placeholder="Section name"
-                placeholderTextColor="#888"
-                style={[styles.titleInput, { backgroundColor: theme.card, color: theme.text }]}
+                style={styles.titleInput}
                 value={newSubject}
                 onChangeText={setNewSubject}
               />
@@ -506,7 +456,10 @@ export default function NotesScreen() {
                       setSubjects([...subjects, name]);
                       setSubjectColors(prev => ({
                         ...prev,
-                        [name]: selectedColor,
+                        [name]:
+                          colorChoices[
+                            Math.floor(Math.random() * colorChoices.length)
+                          ],
                       }));
                     }
                     setAddingSubject(false);
@@ -543,7 +496,7 @@ const styles = StyleSheet.create({
     padding: 8,
     borderWidth: 1,
     borderRadius: 8,
-    backgroundColor: '#1e1e1e',
+    backgroundColor: '#fff',
   },
   subjectGrid: {
     flexDirection: 'row',
@@ -601,7 +554,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   noteCard: {
-    backgroundColor: '#1e1e1e',
+    backgroundColor: '#fff',
     padding: 12,
     borderRadius: 8,
     marginBottom: 12,
@@ -617,7 +570,7 @@ const styles = StyleSheet.create({
   },
   notePreview: {
     fontSize: 14,
-    color: '#fff',
+    color: '#555',
   },
   fab: {
     position: 'absolute',
@@ -665,7 +618,7 @@ const styles = StyleSheet.create({
   addAttachment: {
     width: 80,
     height: 80,
-    backgroundColor: '#1e1e1e',
+    backgroundColor: '#e2e8f0',
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 4,
@@ -708,19 +661,9 @@ const styles = StyleSheet.create({
   },
   addModalContent: {
     width: '80%',
-    backgroundColor: '#1e1e1e',
+    backgroundColor: '#fff',
     borderRadius: 8,
     padding: 16,
-  },
-  colorRow: {
-    flexDirection: 'row',
-    marginBottom: 12,
-  },
-  colorOption: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    marginRight: 8,
   },
 });
 

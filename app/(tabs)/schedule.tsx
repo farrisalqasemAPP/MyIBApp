@@ -10,8 +10,6 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Colors } from '@/constants/Colors';
-import { useThemeContext } from '@/context/ThemeContext';
 
 const eventColorOptions = [
   '#FF6633', '#FFB399', '#FF33FF', '#FFFF99', '#00B3E6', '#E6B333',
@@ -33,8 +31,6 @@ type DayData = {
 };
 
 export default function ScheduleScreen() {
-  const { colorScheme } = useThemeContext();
-  const theme = Colors[colorScheme];
   const [currentDate, setCurrentDate] = useState(new Date());
   const [schedule, setSchedule] = useState<Record<string, DayData>>({});
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -108,29 +104,20 @@ export default function ScheduleScreen() {
   };
 
   return (
-    <LinearGradient
-      colors={
-        colorScheme === 'light' ? ['#ffffff', '#e5e7eb'] : ['#2e1065', '#000']
-      }
-      style={styles.container}
-    >
+    <LinearGradient colors={["#2e1065", "#000"]} style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => setCurrentDate(new Date(year, month - 1, 1))}>
-          <Ionicons name="chevron-back" size={24} color={theme.text} />
+          <Ionicons name="chevron-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={[styles.title, { color: theme.text }]}>
-          {getMonthName(currentDate)} {year}
-        </Text>
+        <Text style={styles.title}>{getMonthName(currentDate)} {year}</Text>
         <TouchableOpacity onPress={() => setCurrentDate(new Date(year, month + 1, 1))}>
-          <Ionicons name="chevron-forward" size={24} color={theme.text} />
+          <Ionicons name="chevron-forward" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
 
       <View style={styles.weekRow}>
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-          <Text key={d} style={[styles.weekDay, { color: theme.text }]}>
-            {d}
-          </Text>
+          <Text key={d} style={styles.weekDay}>{d}</Text>
         ))}
       </View>
 
@@ -163,15 +150,11 @@ export default function ScheduleScreen() {
                     />
                   )}
                   {isToday ? (
-                    <View style={[styles.todayCircle, { borderColor: theme.text }]}>
-                      <Text style={[styles.dayText, { color: theme.text }]}> 
-                        {date.getDate()}
-                      </Text>
+                    <View style={styles.todayCircle}>
+                      <Text style={styles.dayText}>{date.getDate()}</Text>
                     </View>
                   ) : (
-                    <Text style={[styles.dayText, { color: theme.text }]}>
-                      {date.getDate()}
-                    </Text>
+                    <Text style={styles.dayText}>{date.getDate()}</Text>
                   )}
                 </>
               )}
@@ -185,33 +168,29 @@ export default function ScheduleScreen() {
         animationType="slide"
         onRequestClose={() => setSelectedDate(null)}
       >
-        <View style={[styles.modalContainer, { backgroundColor: theme.card }]}> 
+        <View style={styles.modalContainer}>
           {selectedDate && (
             <>
-              <Text style={[styles.modalTitle, { color: theme.text }]}> 
-                {selectedDate.toDateString()}
-              </Text>
+              <Text style={styles.modalTitle}>{selectedDate.toDateString()}</Text>
               <ScrollView style={styles.notesList}>
                 {currentNotes.map((note, idx) => (
                   <View key={idx} style={styles.noteItem}>
-                    <Text style={[styles.noteText, { color: theme.text }]}> 
-                      {note}
-                    </Text>
+                    <Text style={styles.noteText}>{note}</Text>
                     <TouchableOpacity onPress={() => deleteNote(idx)}>
-                      <Ionicons name="trash" size={16} color={theme.text} />
+                      <Ionicons name="trash" size={16} color="#fff" />
                     </TouchableOpacity>
                   </View>
                 ))}
               </ScrollView>
               <TextInput
-                style={[styles.input, { backgroundColor: theme.card, color: theme.text, borderColor: theme.text }]}
+                style={styles.input}
                 placeholder="New note"
                 placeholderTextColor="#aaa"
                 value={newNote}
                 onChangeText={setNewNote}
               />
               <TouchableOpacity style={styles.addButton} onPress={addNote}>
-                <Text style={[styles.addButtonText, { color: theme.text }]}>Add Note</Text>
+                <Text style={styles.addButtonText}>Add Note</Text>
               </TouchableOpacity>
 
               <ScrollView style={styles.eventsList}>
@@ -220,17 +199,15 @@ export default function ScheduleScreen() {
                     <View
                       style={[styles.eventColor, { backgroundColor: ev.color }]}
                     />
-                    <Text style={[styles.eventText, { color: theme.text }]}>
-                      {ev.text}
-                    </Text>
+                    <Text style={styles.eventText}>{ev.text}</Text>
                     <TouchableOpacity onPress={() => deleteEvent(idx)}>
-                      <Ionicons name="trash" size={16} color={theme.text} />
+                      <Ionicons name="trash" size={16} color="#fff" />
                     </TouchableOpacity>
                   </View>
                 ))}
               </ScrollView>
               <TextInput
-                style={[styles.input, { backgroundColor: theme.card, color: theme.text, borderColor: theme.text }]}
+                style={styles.input}
                 placeholder="New event"
                 placeholderTextColor="#aaa"
                 value={newEvent}
@@ -247,27 +224,24 @@ export default function ScheduleScreen() {
                     style={[
                       styles.colorOption,
                       { backgroundColor: color },
-                      newEventColor === color && {
-                        borderWidth: 2,
-                        borderColor: theme.text,
-                      },
+                      newEventColor === color && styles.selectedColor,
                     ]}
                     onPress={() => setNewEventColor(color)}
                   />
                 ))}
               </ScrollView>
               <TouchableOpacity style={styles.addButton} onPress={addEvent}>
-                <Text style={[styles.addButtonText, { color: theme.text }]}>Add Event</Text>
+                <Text style={styles.addButtonText}>Add Event</Text>
               </TouchableOpacity>
               <View style={styles.modalButtons}>
                 <TouchableOpacity style={styles.saveButton} onPress={saveDay}>
-                  <Text style={[styles.saveButtonText, { color: theme.text }]}>Save</Text>
+                  <Text style={styles.saveButtonText}>Save</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.cancelButton}
                   onPress={() => setSelectedDate(null)}
                 >
-                  <Text style={[styles.saveButtonText, { color: theme.text }]}>Close</Text>
+                  <Text style={styles.saveButtonText}>Close</Text>
                 </TouchableOpacity>
               </View>
             </>
@@ -378,6 +352,10 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     marginRight: 8,
+  },
+  selectedColor: {
+    borderWidth: 2,
+    borderColor: '#fff',
   },
   notesList: {
     maxHeight: 120,

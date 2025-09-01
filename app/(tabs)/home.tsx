@@ -14,7 +14,6 @@ import { Ionicons } from '@expo/vector-icons';
 import AIButton from '@/components/AIButton';
 import { Colors } from '@/constants/Colors';
 import { subjectData, SubjectInfo } from '@/constants/subjects';
-import { useThemeContext } from '@/context/ThemeContext';
 
 const cardData = [
   {
@@ -72,10 +71,10 @@ export default function HomeScreen() {
   const [selectedSubject, setSelectedSubject] = useState<SubjectInfo>(subjectData[0]);
   const [showSubjects, setShowSubjects] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
-  const { colorScheme, setColorScheme } = useThemeContext();
+  const [isLightMode, setIsLightMode] = useState(false);
   const [activeCard, setActiveCard] = useState(0);
 
-  const theme = colorScheme === 'light' ? Colors.light : Colors.dark;
+  const theme = isLightMode ? Colors.light : Colors.dark;
   const { width } = useWindowDimensions();
   const scrollRef = useRef<ScrollView>(null);
   const styles = useMemo(() => createStyles(theme, width), [theme, width]);
@@ -178,10 +177,7 @@ export default function HomeScreen() {
             <Text style={styles.settingsTitle}>Settings</Text>
             <View style={styles.settingRow}>
               <Text style={styles.settingText}>Light Mode</Text>
-              <Switch
-                value={colorScheme === 'light'}
-                onValueChange={v => setColorScheme(v ? 'light' : 'dark')}
-              />
+              <Switch value={isLightMode} onValueChange={setIsLightMode} />
             </View>
             <Text style={styles.settingPlaceholder}>
               More customization options coming soon...

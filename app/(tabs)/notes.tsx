@@ -4,6 +4,7 @@ import {
   Text,
   View,
   ScrollView,
+  FlatList,
   TouchableOpacity,
   Modal,
   Alert,
@@ -19,7 +20,7 @@ import RenderHTML from 'react-native-render-html';
 import { useLocalSearchParams } from 'expo-router';
 import DraggableFlatList, {
   RenderItemParams,
-} from 'react-native-draggable-flatlist'; // eslint-disable-line import/no-unresolved
+} from 'react-native-draggable-flatlist';
 import AIButton from '../../components/AIButton';
 import { subjectData, SubjectInfo } from '@/constants/subjects';
 
@@ -65,6 +66,7 @@ export default function NotesScreen() {
   const [showSubjectColors, setShowSubjectColors] = useState(false);
   const [showNoteColors, setShowNoteColors] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [subjectSearch, setSubjectSearch] = useState('');
   const [addSubjectModalVisible, setAddSubjectModalVisible] = useState(false);
   const [newSubjectTitle, setNewSubjectTitle] = useState('');
   const [newSubjectColor, setNewSubjectColor] = useState(colorOptions[0]);
@@ -95,6 +97,22 @@ export default function NotesScreen() {
         )
         .sort((a, b) => Number(b.note.pinned) - Number(a.note.pinned)),
     [subjects, searchQuery],
+  );
+
+  const filteredSubjectNotes = useMemo(
+    () =>
+      active
+        ? active.notes
+            .filter(n => {
+              const q = subjectSearch.toLowerCase();
+              return (
+                n.title.toLowerCase().includes(q) ||
+                stripHtml(n.text).toLowerCase().includes(q)
+              );
+            })
+            .sort((a, b) => Number(b.pinned) - Number(a.pinned))
+        : [],
+    [active, subjectSearch],
   );
 
   const openSubject = (subject: Subject) => {
@@ -302,6 +320,50 @@ export default function NotesScreen() {
     setSubjects(prev => prev.map(s => (s.key === active.key ? { ...s, color } : s)));
     setActive(prev => (prev && prev.key === active.key ? { ...prev, color } : prev));
   };
+
+  const renderNoteCard = ({ item }: { item: Note }) => (
+    <TouchableOpacity
+      style={[styles.noteCard, { backgroundColor: item.color }]}
+      onPress={() => openNote(item)}
+    >
+      <View style={styles.noteCardHeader}>
+        <Text style={styles.noteTitle}>{item.title}</Text>
+        <TouchableOpacity onPress={() => togglePinNote(item.id)}>
+          <Ionicons
+            name={item.pinned ? 'star' : 'star-outline'}
+            size={20}
+            color={iconColor}
+          />
+        </TouchableOpacity>
+      </View>
+      <Text style={styles.noteDate}>{item.date}</Text>
+      <RenderHTML
+        contentWidth={width}
+        source={{ html: item.text }}
+        baseStyle={styles.noteText}
+        defaultTextProps={{ numberOfLines: 3, ellipsizeMode: 'tail' }}
+      />
+      {item.images?.length ? (
+        item.images.length === 1 ? (
+          <Image
+            source={{ uri: item.images[0] }}
+            style={styles.noteImage}
+            contentFit="contain"
+          />
+        ) : (
+          <View style={styles.imageIconContainer}>
+            <Ionicons name="images" size={20} color={iconColor} />
+          </View>
+        )
+      ) : null}
+      <TouchableOpacity
+        style={styles.noteDelete}
+        onPress={() => confirmDeleteNote(item.id)}
+      >
+        <Ionicons name="trash" size={20} color={iconColor} />
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
 
   const fetchSubjectInfo = async (title: string) => {
     try {
@@ -559,78 +621,44 @@ export default function NotesScreen() {
                 onPress={() => setShowSubjectColors(!showSubjectColors)}
               />
             </View>
-            <ScrollView contentContainerStyle={styles.modalContent}>
-              {showSubjectColors && (
-                <View style={styles.colorRow}>
-                  {colorOptions.map(c => (
-                    <TouchableOpacity
-                      key={c}
-                      style={[
-                        styles.colorSwatch,
-                        { backgroundColor: c },
-                        active.color === c && styles.selectedSwatch,
-                      ]}
-                      onPress={() => changeSubjectColor(c)}
-                    />
-                  ))}
-                </View>
-              )}
-              {active.notes
-                .slice()
-                .sort((a, b) => Number(b.pinned) - Number(a.pinned))
-                .map(note => (
-                <View
-                  key={note.id}
-                  style={[styles.noteCard, { backgroundColor: note.color }]}
-                >
-                  <TouchableOpacity style={styles.noteBody} onPress={() => openNote(note)}>
-                    <Text style={styles.noteTitle}>{note.title}</Text>
-                    <Text style={styles.noteDate}>{note.date}</Text>
-                    <RenderHTML
-                      contentWidth={width}
-                      source={{ html: note.text }}
-                      baseStyle={styles.noteText}
-                      defaultTextProps={{ numberOfLines: 3, ellipsizeMode: 'tail' }}
-                    />
-                    {note.images?.length ? (
-                      note.images.length === 1 ? (
-                        <Image
-                          source={{ uri: note.images[0] }}
-                          style={styles.noteImage}
-                          contentFit="contain"
+            <FlatList
+              data={filteredSubjectNotes}
+              keyExtractor={n => n.id}
+              renderItem={renderNoteCard}
+              contentContainerStyle={styles.modalContent}
+              ListHeaderComponent={
+                <View>
+                  {showSubjectColors && (
+                    <View style={styles.colorRow}>
+                      {colorOptions.map(c => (
+                        <TouchableOpacity
+                          key={c}
+                          style={[
+                            styles.colorSwatch,
+                            { backgroundColor: c },
+                            active.color === c && styles.selectedSwatch,
+                          ]}
+                          onPress={() => changeSubjectColor(c)}
                         />
-                      ) : (
-                        <View style={styles.imageIconContainer}>
-                          <Ionicons name="images" size={20} color={iconColor} />
-                        </View>
-                      )
-                    ) : null}
-                  </TouchableOpacity>
-                  <View style={styles.noteActions}>
-                    <TouchableOpacity
-                      style={styles.pinIcon}
-                      onPress={() => togglePinNote(note.id)}
-                    >
-                      <Ionicons
-                        name={note.pinned ? 'star' : 'star-outline'}
-                        size={20}
-                        color={iconColor}
-                      />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.deleteIcon}
-                      onPress={() => confirmDeleteNote(note.id)}
-                    >
-                      <Ionicons name="trash" size={20} color={iconColor} />
-                    </TouchableOpacity>
-                  </View>
+                      ))}
+                    </View>
+                  )}
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search notes..."
+                    placeholderTextColor="#aaa"
+                    value={subjectSearch}
+                    onChangeText={setSubjectSearch}
+                  />
                 </View>
-              ))}
-              <TouchableOpacity style={styles.addButton} onPress={() => openNote()}>
-                <Ionicons name="add" size={20} color={iconColor} />
-                <Text style={styles.addButtonText}>Add Note</Text>
-              </TouchableOpacity>
-            </ScrollView>
+              }
+              ListFooterComponent={
+                <TouchableOpacity style={styles.addButton} onPress={() => openNote()}>
+                  <Ionicons name="add" size={20} color={iconColor} />
+                  <Text style={styles.addButtonText}>Add Note</Text>
+                </TouchableOpacity>
+              }
+            />
             <TouchableOpacity style={styles.closeButton} onPress={closeSubject}>
               <Text style={styles.closeButtonText}>Close</Text>
             </TouchableOpacity>
@@ -660,7 +688,14 @@ export default function NotesScreen() {
               />
               <RichToolbar
                 editor={richText}
-                actions={[actions.setItalic, actions.setUnderline]}
+                actions={[
+                  actions.setBold,
+                  actions.setItalic,
+                  actions.setUnderline,
+                  actions.insertBulletsList,
+                  actions.insertOrderedList,
+                  actions.checkboxList,
+                ]}
                 iconTint={iconColor}
                 selectedIconTint={iconColor}
                 style={styles.formatBar}
@@ -876,17 +911,17 @@ const createStyles = () => {
       borderRadius: 8,
       marginBottom: 12,
       padding: 12,
-      flexDirection: 'row',
-      alignItems: 'flex-start',
+      position: 'relative',
     },
     searchCard: {
       borderRadius: 8,
       marginBottom: 12,
       padding: 12,
     },
-    noteBody: {
-      flex: 1,
-      alignItems: 'flex-start',
+    noteCardHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
     },
     noteDate: {
       color: textColor,
@@ -906,17 +941,10 @@ const createStyles = () => {
       textAlign: 'left',
       marginBottom: 4,
     },
-    noteActions: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginLeft: 8,
-    },
-    pinIcon: {
-      marginRight: 8,
-      justifyContent: 'center',
-    },
-    deleteIcon: {
-      justifyContent: 'center',
+    noteDelete: {
+      position: 'absolute',
+      top: 8,
+      right: 8,
     },
     addButton: {
       flexDirection: 'row',

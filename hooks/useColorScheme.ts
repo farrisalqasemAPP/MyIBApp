@@ -1,9 +1,6 @@
 import { useColorScheme as _useColorScheme } from 'react-native';
-import { useContext } from 'react';
-import { ThemeContext } from '@/context/ThemeContext';
 
-// Return the chosen color scheme or fall back to the device preference.
+// Return the device color scheme, defaulting to light when unavailable.
 export function useColorScheme() {
-  const { colorScheme } = useContext(ThemeContext);
-  return colorScheme ?? _useColorScheme() ?? 'light';
+  return _useColorScheme() ?? 'light';
 }

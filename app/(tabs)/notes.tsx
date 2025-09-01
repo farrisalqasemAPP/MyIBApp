@@ -885,9 +885,9 @@ const createStyles = () => {
       padding: 4,
     },
     grid: {
+      paddingHorizontal: 8,
       paddingBottom: 16,
-      borderWidth: 1,
-      borderColor: inputBorder,
+      flexGrow: 1,
     },
     searchInput: {
       borderColor: inputBorder,
@@ -902,11 +902,13 @@ const createStyles = () => {
     },
     box: {
       flex: 1,
-      borderWidth: 1,
-      borderColor: inputBorder,
       padding: 16,
       alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 12,
       position: 'relative',
+      height: 120,
+      margin: 8,
     },
     boxContent: {
       alignItems: 'center',

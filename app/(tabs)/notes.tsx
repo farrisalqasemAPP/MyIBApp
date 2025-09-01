@@ -269,6 +269,30 @@ export default function NotesScreen() {
     ]);
   };
 
+  const restoreSubject = (key: string) => {
+    const subject = deletedSubjects.find(s => s.key === key);
+    if (!subject) return;
+    setDeletedSubjects(prev => prev.filter(s => s.key !== key));
+    setDeletedNotes(prev => prev.filter(n => n.subjectKey !== key));
+    setSubjects(prev => [...prev, subject]);
+  };
+
+  const restoreNote = (id: string) => {
+    const note = deletedNotes.find(n => n.id === id);
+    if (!note) return;
+    const subjectExists = subjects.find(s => s.key === note.subjectKey);
+    if (!subjectExists) return;
+    const { subjectKey, subjectTitle, images: restoredImages, ...rest } = note;
+    setSubjects(prev =>
+      prev.map(s =>
+        s.key === subjectKey
+          ? { ...s, notes: [...s.notes, { ...rest, images: restoredImages || [] }] }
+          : s,
+      ),
+    );
+    setDeletedNotes(prev => prev.filter(n => n.id !== id));
+  };
+
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -495,14 +519,45 @@ export default function NotesScreen() {
         <View style={styles.modalContainer}>
           <Text style={styles.modalTitle}>Trash</Text>
           <ScrollView contentContainerStyle={styles.modalContent}>
-          {deletedSubjects.length > 0 && (
-            <>
-            </>
-          )}
-          {deletedNotes.length > 0 && (
-            <>
-            </>
-          )}
+            {deletedSubjects.length > 0 && (
+              <>
+                <Text style={styles.sectionHeader}>Subjects</Text>
+                {deletedSubjects.map(s => (
+                  <View
+                    key={s.key}
+                    style={[styles.trashCard, { backgroundColor: s.color }]}
+                  >
+                    <Text style={styles.noteTitle}>{s.title}</Text>
+                    <TouchableOpacity
+                      style={styles.restoreButton}
+                      onPress={() => restoreSubject(s.key)}
+                    >
+                      <Text style={styles.saveButtonText}>Restore</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </>
+            )}
+            {deletedNotes.length > 0 && (
+              <>
+                <Text style={styles.sectionHeader}>Notes</Text>
+                {deletedNotes.map(n => (
+                  <View
+                    key={n.id}
+                    style={[styles.trashCard, { backgroundColor: n.color }]}
+                  >
+                    <Text style={styles.noteTitle}>{n.title}</Text>
+                    <Text style={styles.noteDate}>{n.subjectTitle}</Text>
+                    <TouchableOpacity
+                      style={styles.restoreButton}
+                      onPress={() => restoreNote(n.id)}
+                    >
+                      <Text style={styles.saveButtonText}>Restore</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </>
+            )}
             {!deletedSubjects.length && !deletedNotes.length && (
               <Text style={styles.noteDate}>Trash is empty</Text>
             )}

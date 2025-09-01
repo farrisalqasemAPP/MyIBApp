@@ -19,7 +19,7 @@ import RenderHTML from 'react-native-render-html';
 import { useLocalSearchParams } from 'expo-router';
 import DraggableFlatList, {
   RenderItemParams,
-} from 'react-native-draggable-flatlist';
+} from 'react-native-draggable-flatlist'; // eslint-disable-line import/no-unresolved
 import AIButton from '../../components/AIButton';
 import { subjectData, SubjectInfo } from '@/constants/subjects';
 
@@ -62,12 +62,13 @@ export default function NotesScreen() {
   const [active, setActive] = useState<Subject | null>(null);
   const [noteModalVisible, setNoteModalVisible] = useState(false);
   const [currentNote, setCurrentNote] = useState<Note | null>(null);
+  const [showSubjectColors, setShowSubjectColors] = useState(false);
   const [showNoteColors, setShowNoteColors] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [addSubjectModalVisible, setAddSubjectModalVisible] = useState(false);
   const [newSubjectTitle, setNewSubjectTitle] = useState('');
   const [newSubjectColor, setNewSubjectColor] = useState(colorOptions[0]);
-  const deletedSubjects: Subject[] = [];
+  const [deletedSubjects, setDeletedSubjects] = useState<Subject[]>([]);
   const [deletedNotes, setDeletedNotes] = useState<TrashNote[]>([]);
   const [trashModalVisible, setTrashModalVisible] = useState(false);
   const styles = useMemo(() => createStyles(), []);
@@ -96,6 +97,14 @@ export default function NotesScreen() {
     [subjects, searchQuery],
   );
 
+  const openSubject = (subject: Subject) => {
+    setActive(subject);
+    setShowSubjectColors(false);
+  };
+  const closeSubject = () => {
+    setActive(null);
+    setShowSubjectColors(false);
+  };
 
   const openNote = (note?: Note) => {
     if (note) {
@@ -151,6 +160,31 @@ export default function NotesScreen() {
     );
   };
 
+  const togglePinNote = (id: string) => {
+    if (!active) return;
+    setSubjects(prev =>
+      prev.map(s =>
+        s.key === active.key
+          ? {
+              ...s,
+              notes: s.notes.map(n =>
+                n.id === id ? { ...n, pinned: !n.pinned } : n,
+              ),
+            }
+          : s,
+      ),
+    );
+    setActive(prev =>
+      prev && prev.key === active.key
+        ? {
+            ...prev,
+            notes: prev.notes.map(n =>
+              n.id === id ? { ...n, pinned: !n.pinned } : n,
+            ),
+          }
+        : prev,
+    );
+  };
 
   const deleteNote = (id: string) => {
     if (!active) return;
@@ -191,6 +225,39 @@ export default function NotesScreen() {
     ]);
   };
 
+  const deleteSubject = (key: string) => {
+    const subjectToDelete = subjects.find(s => s.key === key);
+    if (!subjectToDelete) return;
+    setSubjects(prev => prev.filter(s => s.key !== key));
+    setDeletedSubjects(prev => [...prev, subjectToDelete]);
+    setDeletedNotes(prev => [
+      ...prev,
+      ...subjectToDelete.notes.map(n => ({
+        ...n,
+        images: n.images || [],
+        subjectKey: subjectToDelete.key,
+        subjectTitle: subjectToDelete.title,
+      })),
+    ]);
+    if (active?.key === key) {
+      setActive(null);
+    }
+  };
+
+  const confirmDeleteSubject = (key: string) => {
+    Alert.alert('Delete Subject', 'Are you sure you want to delete this subject?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => deleteSubject(key) },
+    ]);
+  };
+
+  const restoreSubject = (key: string) => {
+    const subject = deletedSubjects.find(s => s.key === key);
+    if (!subject) return;
+    setDeletedSubjects(prev => prev.filter(s => s.key !== key));
+    setDeletedNotes(prev => prev.filter(n => n.subjectKey !== key));
+    setSubjects(prev => [...prev, subject]);
+  };
 
   const restoreNote = (id: string) => {
     const note = deletedNotes.find(n => n.id === id);
@@ -230,6 +297,11 @@ export default function NotesScreen() {
     });
   };
 
+  const changeSubjectColor = (color: string) => {
+    if (!active) return;
+    setSubjects(prev => prev.map(s => (s.key === active.key ? { ...s, color } : s)));
+    setActive(prev => (prev && prev.key === active.key ? { ...prev, color } : prev));
+  };
 
   const fetchSubjectInfo = async (title: string) => {
     try {
@@ -337,7 +409,7 @@ export default function NotesScreen() {
           onDragEnd={({ data }) =>
             setSubjects(data.filter(s => s.key !== 'add-subject'))
           }
-          renderItem={({ item }: RenderItemParams<Subject>) => {
+          renderItem={({ item, drag, isActive }: RenderItemParams<Subject>) => {
             if (item.key === 'add-subject') {
               return (
                 <TouchableOpacity
@@ -350,7 +422,28 @@ export default function NotesScreen() {
               );
             }
             return (
-              <View style={[styles.box, { backgroundColor: item.color }]} />
+              <View
+                style={[styles.box, { backgroundColor: item.color }]}
+              >
+                <TouchableOpacity
+                  style={styles.subjectDeleteIcon}
+                  onPress={() => confirmDeleteSubject(item.key)}
+                >
+                  <Ionicons name="close" size={16} color={iconColor} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.boxContent}
+                  onLongPress={drag}
+                  disabled={isActive}
+                  onPress={() => openSubject(item)}
+                >
+                  <Ionicons name={item.icon} size={32} color={iconColor} />
+                  <Text style={styles.boxTitle}>{item.title}</Text>
+                  {item.notes.length > 0 && (
+                    <Text style={styles.boxNote}>{item.notes.length} notes</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
             );
           }}
           contentContainerStyle={styles.grid}
@@ -371,7 +464,15 @@ export default function NotesScreen() {
                   <View
                     key={s.key}
                     style={[styles.trashCard, { backgroundColor: s.color }]}
-                  />
+                  >
+                    <Text style={styles.noteTitle}>{s.title}</Text>
+                    <TouchableOpacity
+                      style={styles.restoreButton}
+                      onPress={() => restoreSubject(s.key)}
+                    >
+                      <Text style={styles.saveButtonText}>Restore</Text>
+                    </TouchableOpacity>
+                  </View>
                 ))}
               </>
             )}
@@ -446,7 +547,96 @@ export default function NotesScreen() {
       </Modal>
 
       <Modal visible={!!active} animationType="slide">
-        {active && <View style={styles.modalContainer} />}
+        {active && (
+          <View style={styles.modalContainer}>
+            <View style={[styles.modalHeader, { backgroundColor: active.color }]}> 
+              <View style={styles.headerLeft}>
+                <Ionicons name={active.icon} size={28} color={iconColor} />
+                <Text style={styles.modalTitle}>{active.title}</Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.colorIndicator, { backgroundColor: active.color }]}
+                onPress={() => setShowSubjectColors(!showSubjectColors)}
+              />
+            </View>
+            <ScrollView contentContainerStyle={styles.modalContent}>
+              {showSubjectColors && (
+                <View style={styles.colorRow}>
+                  {colorOptions.map(c => (
+                    <TouchableOpacity
+                      key={c}
+                      style={[
+                        styles.colorSwatch,
+                        { backgroundColor: c },
+                        active.color === c && styles.selectedSwatch,
+                      ]}
+                      onPress={() => changeSubjectColor(c)}
+                    />
+                  ))}
+                </View>
+              )}
+              {active.notes
+                .slice()
+                .sort((a, b) => Number(b.pinned) - Number(a.pinned))
+                .map(note => (
+                <View
+                  key={note.id}
+                  style={[styles.noteCard, { backgroundColor: note.color }]}
+                >
+                  <TouchableOpacity style={styles.noteBody} onPress={() => openNote(note)}>
+                    <Text style={styles.noteTitle}>{note.title}</Text>
+                    <Text style={styles.noteDate}>{note.date}</Text>
+                    <RenderHTML
+                      contentWidth={width}
+                      source={{ html: note.text }}
+                      baseStyle={styles.noteText}
+                      defaultTextProps={{ numberOfLines: 3, ellipsizeMode: 'tail' }}
+                    />
+                    {note.images?.length ? (
+                      note.images.length === 1 ? (
+                        <Image
+                          source={{ uri: note.images[0] }}
+                          style={styles.noteImage}
+                          contentFit="contain"
+                        />
+                      ) : (
+                        <View style={styles.imageIconContainer}>
+                          <Ionicons name="images" size={20} color={iconColor} />
+                        </View>
+                      )
+                    ) : null}
+                  </TouchableOpacity>
+                  <View style={styles.noteActions}>
+                    <TouchableOpacity
+                      style={styles.pinIcon}
+                      onPress={() => togglePinNote(note.id)}
+                    >
+                      <Ionicons
+                        name={note.pinned ? 'star' : 'star-outline'}
+                        size={20}
+                        color={iconColor}
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.deleteIcon}
+                      onPress={() => confirmDeleteNote(note.id)}
+                    >
+                      <Ionicons name="trash" size={20} color={iconColor} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+              <TouchableOpacity style={styles.addButton} onPress={() => openNote()}>
+                <Ionicons name="add" size={20} color={iconColor} />
+                <Text style={styles.addButtonText}>Add Note</Text>
+              </TouchableOpacity>
+            </ScrollView>
+            <TouchableOpacity style={styles.closeButton} onPress={closeSubject}>
+              <Text style={styles.closeButtonText}>Close</Text>
+            </TouchableOpacity>
+            <AIButton bottomOffset={100} />
+          </View>
+        )}
       </Modal>
 
       <Modal visible={noteModalVisible} animationType="slide">

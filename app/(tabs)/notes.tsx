@@ -301,7 +301,7 @@ export default function NotesScreen() {
               contentContainerStyle={{ padding: 16 }}
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  style={[styles.noteCard, { backgroundColor: theme.card }]}
+                  style={[styles.noteCard, { backgroundColor: 'transparent' }]}
                   onPress={() => openEdit(item)}
                 >
                   <Text style={[styles.noteTitle, { color: theme.text }]}>
@@ -339,7 +339,7 @@ export default function NotesScreen() {
               contentContainerStyle={{ padding: 16 }}
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  style={[styles.noteCard, { backgroundColor: theme.card }]}
+                  style={[styles.noteCard, { backgroundColor: 'transparent' }]}
                   onPress={() => openEdit(item)}
                   onLongPress={() => deleteNote(item.id)}
                 >
@@ -429,7 +429,7 @@ export default function NotesScreen() {
                   <TextInput
                     placeholder="Title"
                     placeholderTextColor="#888"
-                    style={[styles.titleInput, { backgroundColor: theme.card, color: theme.text }]}
+                    style={[styles.titleInput, { backgroundColor: 'transparent', color: theme.text }]}
                     value={current?.title}
                     onChangeText={t =>
                       setCurrent(c => (c ? { ...c, title: t } : c))
@@ -437,7 +437,12 @@ export default function NotesScreen() {
                   />
                   <RichEditor
                     ref={editorRef}
-                    style={[styles.editor, { backgroundColor: theme.card, color: theme.text }]}
+                    style={[styles.editor, { backgroundColor: 'transparent', color: theme.text }]}
+                    editorStyle={{
+                      backgroundColor: 'transparent',
+                      color: theme.text,
+                      contentCSSText: 'background-color: transparent;'
+                    }}
                     initialContentHTML={current?.content}
                     placeholder="Start writing..."
                     onChange={html =>
@@ -641,7 +646,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   noteCard: {
-    backgroundColor: '#1e1e1e',
+    backgroundColor: 'transparent',
     padding: 12,
     borderRadius: 8,
     marginBottom: 12,

@@ -16,6 +16,7 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   RichEditor,
@@ -57,6 +58,7 @@ export default function NotesScreen() {
   const [current, setCurrent] = useState<Note | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const editorRef = useRef<RichEditor>(null);
+  const subjects = ['Math', 'English', 'Science', 'History', 'Art', 'Other'];
 
   // Load notes from the local filesystem on mount.
   useEffect(() => {
@@ -155,13 +157,27 @@ export default function NotesScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <TextInput
-        placeholder="Search"
-        value={query}
-        onChangeText={setQuery}
-        style={styles.search}
-      />
+    <LinearGradient colors={['#3b0d87', '#0f206c']} style={styles.gradient}>
+      <SafeAreaView style={styles.container}>
+        <Text style={styles.logo}>CLARITY</Text>
+        <TextInput
+          placeholder="Search notes"
+          placeholderTextColor="#888"
+          value={query}
+          onChangeText={setQuery}
+          style={styles.search}
+        />
+        <View style={styles.subjectGrid}>
+          {subjects.map(sub => (
+            <TouchableOpacity
+              key={sub}
+              style={styles.subjectCube}
+              onPress={() => setQuery(sub)}
+            >
+              <Text style={styles.subjectText}>{sub}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       <FlatList
         data={filtered.sort((a, b) => b.updatedAt - a.updatedAt)}
         keyExtractor={n => n.id}
@@ -278,18 +294,50 @@ export default function NotesScreen() {
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  gradient: {
+    flex: 1,
+  },
   container: {
     flex: 1,
+  },
+  logo: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    color: '#fff',
+    marginTop: 16,
   },
   search: {
     margin: 16,
     padding: 8,
     borderWidth: 1,
     borderRadius: 8,
+    backgroundColor: '#fff',
+  },
+  subjectGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  subjectCube: {
+    width: '30%',
+    aspectRatio: 1,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 8,
+    marginBottom: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  subjectText: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
   noteCard: {
     backgroundColor: '#fff',

@@ -20,7 +20,6 @@ import RenderHTML from 'react-native-render-html';
 import { useLocalSearchParams } from 'expo-router';
 import DraggableFlatList, {
   RenderItemParams,
-  ScaleDecorator,
 } from 'react-native-draggable-flatlist';
 import AIButton from '../../components/AIButton';
 import { subjectData, SubjectInfo } from '@/constants/subjects';
@@ -375,28 +374,26 @@ export default function NotesScreen() {
     }
 
     return (
-      <ScaleDecorator>
-        <Animated.View style={[styles.box, { backgroundColor: item.color }, animatedStyle]}>
-          <TouchableOpacity
-            style={styles.subjectDeleteIcon}
-            onPress={() => confirmDeleteSubject(item.key)}
-          >
-            <Ionicons name="close" size={16} color={iconColor} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.boxContent}
-            onLongPress={drag}
-            disabled={isActive}
-            onPress={() => openSubject(item)}
-          >
-            <Ionicons name={item.icon} size={32} color={iconColor} />
-            <Text style={styles.boxTitle}>{item.title}</Text>
-            {item.notes.length > 0 && (
-              <Text style={styles.boxNote}>{item.notes.length} notes</Text>
-            )}
-          </TouchableOpacity>
-        </Animated.View>
-      </ScaleDecorator>
+      <Animated.View style={[styles.box, { backgroundColor: item.color }, animatedStyle]}>
+        <TouchableOpacity
+          style={styles.subjectDeleteIcon}
+          onPress={() => confirmDeleteSubject(item.key)}
+        >
+          <Ionicons name="close" size={16} color={iconColor} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.boxContent}
+          onLongPress={drag}
+          disabled={isActive}
+          onPress={() => openSubject(item)}
+        >
+          <Ionicons name={item.icon} size={32} color={iconColor} />
+          <Text style={styles.boxTitle}>{item.title}</Text>
+          {item.notes.length > 0 && (
+            <Text style={styles.boxNote}>{item.notes.length} notes</Text>
+          )}
+        </TouchableOpacity>
+      </Animated.View>
     );
   };
 
@@ -443,46 +440,44 @@ export default function NotesScreen() {
     } as const;
 
     return (
-      <ScaleDecorator>
-        <Animated.View
-          style={[styles.noteCard, { backgroundColor: item.color }, animatedStyle]}
+      <Animated.View
+        style={[styles.noteCard, { backgroundColor: item.color }, animatedStyle]}
+      >
+        <TouchableOpacity
+          style={styles.noteBody}
+          onPress={() => openNote(item)}
+          onLongPress={drag}
+          disabled={isActive}
         >
-          <TouchableOpacity
-            style={styles.noteBody}
-            onPress={() => openNote(item)}
-            onLongPress={drag}
-            disabled={isActive}
-          >
-            <Text style={styles.noteTitle}>{item.title}</Text>
-            <Text style={styles.noteDate}>{item.date}</Text>
-            <RenderHTML
-              contentWidth={width}
-              source={{ html: item.text }}
-              baseStyle={styles.noteText}
-              defaultTextProps={{ numberOfLines: 3, ellipsizeMode: 'tail' }}
-            />
-            {item.images?.length ? (
-              item.images.length === 1 ? (
-                <Image
-                  source={{ uri: item.images[0] }}
-                  style={styles.noteImage}
-                  contentFit="contain"
-                />
-              ) : (
-                <View style={styles.imageIconContainer}>
-                  <Ionicons name="images" size={20} color={iconColor} />
-                </View>
-              )
-            ) : null}
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.deleteIcon}
-            onPress={() => confirmDeleteNote(item.id)}
-          >
-            <Ionicons name="trash" size={20} color={iconColor} />
-          </TouchableOpacity>
-        </Animated.View>
-      </ScaleDecorator>
+          <Text style={styles.noteTitle}>{item.title}</Text>
+          <Text style={styles.noteDate}>{item.date}</Text>
+          <RenderHTML
+            contentWidth={width}
+            source={{ html: item.text }}
+            baseStyle={styles.noteText}
+            defaultTextProps={{ numberOfLines: 3, ellipsizeMode: 'tail' }}
+          />
+          {item.images?.length ? (
+            item.images.length === 1 ? (
+              <Image
+                source={{ uri: item.images[0] }}
+                style={styles.noteImage}
+                contentFit="contain"
+              />
+            ) : (
+              <View style={styles.imageIconContainer}>
+                <Ionicons name="images" size={20} color={iconColor} />
+              </View>
+            )
+          ) : null}
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.deleteIcon}
+          onPress={() => confirmDeleteNote(item.id)}
+        >
+          <Ionicons name="trash" size={20} color={iconColor} />
+        </TouchableOpacity>
+      </Animated.View>
     );
   };
 

@@ -50,8 +50,6 @@ type Note = {
 
 const NOTES_FILE = `${FileSystem.documentDirectory}notes.json`;
 
-const GRADIENT_COLORS = ['#4b1e7e', '#00081f'];
-
 // Simple utility to strip HTML tags for previews/search.
 const stripHtml = (html: string) => html.replace(/<[^>]+>/g, '');
 
@@ -61,54 +59,33 @@ export default function NotesScreen() {
   const [current, setCurrent] = useState<Note | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [currentSubject, setCurrentSubject] = useState<string | null>(null);
-  const [addingSubject, setAddingSubject] = useState(false);
-  const [newSubject, setNewSubject] = useState('');
-  const [searchMode, setSearchMode] = useState(false);
-  const [results, setResults] = useState<Note[]>([]);
   const editorRef = useRef<RichEditor>(null);
-  const [subjects, setSubjects] = useState<string[]>([
-    'Math',
-    'English',
-    'Science',
-    'History',
-    'Art',
-  ]);
+  const subjects = ['Math', 'English', 'Science', 'History', 'Art', 'Other'];
   const colorChoices = [
-    '#7c3aed',
+    '#6b21a8',
     '#2563eb',
     '#16a34a',
     '#dc2626',
     '#f59e0b',
     '#4b5563',
-    '#d946ef',
-    '#0ea5e9',
-    '#f97316',
-    '#84cc16',
   ];
   const defaultColors: Record<string, string> = {
-    Math: '#7c3aed',
+    Math: '#6b21a8',
     English: '#2563eb',
     Science: '#16a34a',
     History: '#dc2626',
     Art: '#f59e0b',
+    Other: '#4b5563',
   };
   const [subjectColors, setSubjectColors] = useState<Record<string, string>>(defaultColors);
-  const [colorMenuSubject, setColorMenuSubject] = useState<string | null>(null);
 
-  const selectColor = (subject: string, color: string) => {
-    setSubjectColors(prev => ({ ...prev, [subject]: color }));
-    setColorMenuSubject(null);
-  };
-
-  const performSearch = () => {
-    const q = query.toLowerCase();
-    const res = notes.filter(
-      n =>
-        n.title.toLowerCase().includes(q) ||
-        stripHtml(n.content).toLowerCase().includes(q),
-    );
-    setResults(res);
-    setSearchMode(true);
+  const cycleSubjectColor = (subject: string) => {
+    setSubjectColors(prev => {
+      const currentColor = prev[subject];
+      const index = colorChoices.indexOf(currentColor);
+      const nextColor = colorChoices[(index + 1) % colorChoices.length];
+      return { ...prev, [subject]: nextColor };
+    });
   };
 
   // Load notes from the local filesystem on mount.
@@ -138,8 +115,7 @@ export default function NotesScreen() {
     ? notes.filter(
         n =>
           n.subject === currentSubject &&
-          (n.title.toLowerCase().includes(query.toLowerCase()) ||
-            stripHtml(n.content).toLowerCase().includes(query.toLowerCase())),
+          n.title.toLowerCase().includes(query.toLowerCase()),
       )
     : [];
 
@@ -209,7 +185,7 @@ export default function NotesScreen() {
   };
 
   return (
-    <LinearGradient colors={GRADIENT_COLORS} style={styles.gradient}>
+    <LinearGradient colors={['#1a0033', '#00081f']} style={styles.gradient}>
       <SafeAreaView style={styles.container}>
         <Text style={styles.logo}>CLARITY</Text>
         <TextInput
@@ -217,41 +193,9 @@ export default function NotesScreen() {
           placeholderTextColor="#888"
           value={query}
           onChangeText={setQuery}
-          onSubmitEditing={performSearch}
           style={styles.search}
         />
-        {searchMode ? (
-          <View style={{ flex: 1 }}>
-            <View style={styles.selectedHeader}>
-              <TouchableOpacity
-                onPress={() => {
-                  setSearchMode(false);
-                  setQuery('');
-                }}
-              >
-                <Ionicons name="arrow-back" size={24} color="#fff" />
-              </TouchableOpacity>
-              <Text style={styles.selectedTitle}>Results</Text>
-            </View>
-            <FlatList
-              data={results}
-              keyExtractor={n => n.id}
-              contentContainerStyle={{ padding: 16 }}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.noteCard}
-                  onPress={() => openEdit(item)}
-                >
-                  <Text style={styles.noteTitle}>{item.title || 'Untitled'}</Text>
-                  <Text numberOfLines={2} style={styles.notePreview}>
-                    {stripHtml(item.content)}
-                  </Text>
-                  <Text style={styles.resultSubject}>{item.subject}</Text>
-                </TouchableOpacity>
-              )}
-            />
-          </View>
-        ) : currentSubject ? (
+        {currentSubject ? (
           <>
             <View style={styles.selectedHeader}>
               <TouchableOpacity
@@ -301,150 +245,86 @@ export default function NotesScreen() {
               >
                 <TouchableOpacity
                   style={styles.colorIcon}
-                  onPress={() =>
-                    setColorMenuSubject(
-                      colorMenuSubject === sub ? null : sub,
-                    )
-                  }
+                  onPress={() => cycleSubjectColor(sub)}
                 >
                   <Ionicons name="color-palette" size={16} color="#fff" />
                 </TouchableOpacity>
-                {colorMenuSubject === sub && (
-                  <View style={styles.colorPicker}>
-                    {colorChoices.map(c => (
-                      <TouchableOpacity
-                        key={c}
-                        style={[styles.colorSwatch, { backgroundColor: c }]}
-                        onPress={() => selectColor(sub, c)}
-                      />
-                    ))}
-                  </View>
-                )}
                 <Text style={styles.subjectText}>{sub}</Text>
               </TouchableOpacity>
             ))}
-            <TouchableOpacity
-              style={[styles.subjectCube, styles.addCube]}
-              onPress={() => setAddingSubject(true)}
-            >
-              <Ionicons name="add" size={24} color="#fff" />
-              <Text style={styles.subjectText}>ADD</Text>
-            </TouchableOpacity>
           </View>
         )}
-        <Modal visible={modalVisible} animationType="none">
-          <LinearGradient colors={GRADIENT_COLORS} style={{ flex: 1 }}>
-            <SafeAreaView style={styles.modalContainer}>
-              <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                style={{ flex: 1 }}
-              >
-                <ScrollView contentContainerStyle={{ padding: 16 }}>
-                  <TextInput
-                    placeholder="Title"
-                    style={styles.titleInput}
-                    value={current?.title}
-                    onChangeText={t =>
-                      setCurrent(c => (c ? { ...c, title: t } : c))
-                    }
-                  />
-                  <RichEditor
-                    ref={editorRef}
-                    style={styles.editor}
-                    initialContentHTML={current?.content}
-                    placeholder="Start writing..."
-                    onChange={html =>
-                      setCurrent(c => (c ? { ...c, content: html } : c))
-                    }
-                  />
-                  <RichToolbar
-                    editor={editorRef}
-                    actions={[
-                      actions.undo,
-                      actions.redo,
-                      actions.bold,
-                      actions.italic,
-                      actions.insertBulletsList,
-                      actions.insertOrderedList,
-                      actions.insertLink,
-                      actions.heading1,
-                    ]}
-                  />
-                  <View style={styles.attachments}>
-                    {current?.attachments.map(att => (
-                      <Image
-                        key={att.id}
-                        source={{ uri: att.uri }}
-                        style={styles.attachmentImage}
-                      />
-                    ))}
-                    <TouchableOpacity
-                      onPress={addImage}
-                      style={styles.addAttachment}
-                    >
-                      <Text style={{ fontSize: 32 }}>+</Text>
-                    </TouchableOpacity>
-                  </View>
-                </ScrollView>
-                <View style={styles.editorButtons}>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setModalVisible(false);
-                      setCurrent(null);
-                    }}
-                    style={styles.cancelBtn}
-                  >
-                    <Text style={styles.btnText}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={saveCurrent} style={styles.saveBtn}>
-                    <Text style={styles.btnText}>Save</Text>
-                  </TouchableOpacity>
-                </View>
-              </KeyboardAvoidingView>
-            </SafeAreaView>
-          </LinearGradient>
-        </Modal>
-        <Modal visible={addingSubject} transparent animationType="fade">
-          <View style={styles.addModal}>
-            <View style={styles.addModalContent}>
+      <Modal visible={modalVisible} animationType="slide">
+        <SafeAreaView style={styles.modalContainer}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={{ flex: 1 }}
+          >
+            <ScrollView contentContainerStyle={{ padding: 16 }}>
               <TextInput
-                placeholder="Section name"
+                placeholder="Title"
                 style={styles.titleInput}
-                value={newSubject}
-                onChangeText={setNewSubject}
+                value={current?.title}
+                onChangeText={t =>
+                  setCurrent(c => (c ? { ...c, title: t } : c))
+                }
               />
-              <View style={styles.editorButtons}>
+              <RichEditor
+                ref={editorRef}
+                style={styles.editor}
+                initialContentHTML={current?.content}
+                placeholder="Start writing..."
+                onChange={html =>
+                  setCurrent(c => (c ? { ...c, content: html } : c))
+                }
+              />
+              <RichToolbar
+                editor={editorRef}
+                actions={[
+                  actions.undo,
+                  actions.redo,
+                  actions.bold,
+                  actions.italic,
+                  actions.insertBulletsList,
+                  actions.insertOrderedList,
+                  actions.insertLink,
+                  actions.heading1,
+                ]}
+              />
+              <View style={styles.attachments}>
+                {current?.attachments.map(att => (
+                  <Image
+                    key={att.id}
+                    source={{ uri: att.uri }}
+                    style={styles.attachmentImage}
+                  />
+                ))}
                 <TouchableOpacity
-                  style={styles.cancelBtn}
-                  onPress={() => {
-                    setAddingSubject(false);
-                    setNewSubject('');
-                  }}
+                  onPress={addImage}
+                  style={styles.addAttachment}
                 >
-                  <Text style={styles.btnText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.saveBtn}
-                  onPress={() => {
-                    if (newSubject.trim()) {
-                      const name = newSubject.trim();
-                      setSubjects([...subjects, name]);
-                      setSubjectColors(prev => ({
-                        ...prev,
-                        [name]: colorChoices[0],
-                      }));
-                    }
-                    setAddingSubject(false);
-                    setNewSubject('');
-                  }}
-                >
-                  <Text style={styles.btnText}>Add</Text>
+                  <Text style={{ fontSize: 32 }}>+</Text>
                 </TouchableOpacity>
               </View>
+            </ScrollView>
+            <View style={styles.editorButtons}>
+              <TouchableOpacity
+                onPress={() => {
+                  setModalVisible(false);
+                  setCurrent(null);
+                }}
+                style={styles.cancelBtn}
+              >
+                <Text style={styles.btnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={saveCurrent} style={styles.saveBtn}>
+                <Text style={styles.btnText}>Save</Text>
+              </TouchableOpacity>
             </View>
-          </View>
-        </Modal>
-      </SafeAreaView>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </Modal>
+    </SafeAreaView>
     </LinearGradient>
   );
 }
@@ -471,44 +351,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   subjectGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     marginBottom: 16,
   },
   subjectCube: {
-    width: '100%',
-    height: 120,
+    width: '48%',
+    aspectRatio: 1,
     borderRadius: 8,
     marginBottom: 16,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
   },
-  addCube: {
-    backgroundColor: '#4b5563',
-    flexDirection: 'row',
-  },
   colorIcon: {
     position: 'absolute',
     top: 6,
     right: 6,
-  },
-  colorPicker: {
-    position: 'absolute',
-    top: 24,
-    right: 0,
-    backgroundColor: '#fff',
-    padding: 4,
-    borderRadius: 4,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    width: 120,
-    zIndex: 10,
-  },
-  colorSwatch: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    margin: 4,
   },
   subjectText: {
     color: '#fff',
@@ -552,7 +413,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#7c3aed',
+    backgroundColor: '#6b21a8',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -563,6 +424,7 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
+    backgroundColor: '#fff',
   },
   titleInput: {
     borderWidth: 1,
@@ -611,7 +473,7 @@ const styles = StyleSheet.create({
   },
   saveBtn: {
     padding: 12,
-    backgroundColor: '#7c3aed',
+    backgroundColor: '#6b21a8',
     borderRadius: 8,
     flex: 1,
     marginLeft: 8,
@@ -620,23 +482,6 @@ const styles = StyleSheet.create({
   btnText: {
     color: '#fff',
     fontWeight: 'bold',
-  },
-  resultSubject: {
-    fontSize: 12,
-    color: '#888',
-    marginTop: 4,
-  },
-  addModal: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  addModalContent: {
-    width: '80%',
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 16,
   },
 });
 

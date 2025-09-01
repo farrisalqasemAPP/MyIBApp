@@ -8,7 +8,6 @@ import {
   Modal,
   Alert,
   TextInput,
-  Animated,
   useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,7 +19,7 @@ import RenderHTML from 'react-native-render-html';
 import { useLocalSearchParams } from 'expo-router';
 import DraggableFlatList, {
   RenderItemParams,
-} from 'react-native-draggable-flatlist';
+} from 'react-native-draggable-flatlist'; // eslint-disable-line import/no-unresolved
 import AIButton from '../../components/AIButton';
 import { subjectData, SubjectInfo } from '@/constants/subjects';
 
@@ -319,168 +318,6 @@ export default function NotesScreen() {
     }
   }, [subjectParam, subjects]);
 
-  const SubjectGridItem = ({
-    item,
-    drag,
-    isActive,
-  }: RenderItemParams<Subject>) => {
-    const shake = useRef(new Animated.Value(0)).current;
-    useEffect(() => {
-      if (isActive) {
-        const anim = Animated.loop(
-          Animated.sequence([
-            Animated.timing(shake, {
-              toValue: 1,
-              duration: 100,
-              useNativeDriver: true,
-            }),
-            Animated.timing(shake, {
-              toValue: -1,
-              duration: 100,
-              useNativeDriver: true,
-            }),
-          ]),
-        );
-        anim.start();
-        return () => anim.stop();
-      }
-      shake.stopAnimation();
-      shake.setValue(0);
-      return undefined;
-    }, [isActive, shake]);
-
-    const animatedStyle = {
-      transform: [
-        {
-          rotate: shake.interpolate({
-            inputRange: [-1, 1],
-            outputRange: ['-3deg', '3deg'],
-          }),
-        },
-        { scale: isActive ? 1.05 : 1 },
-      ],
-    } as const;
-
-    if (item.key === 'add-subject') {
-      return (
-        <TouchableOpacity
-          style={[styles.box, styles.addBox]}
-          onPress={() => setAddSubjectModalVisible(true)}
-        >
-          <Ionicons name="add" size={32} color={iconColor} />
-          <Text style={styles.boxTitle}>ADD</Text>
-        </TouchableOpacity>
-      );
-    }
-
-    return (
-      <Animated.View style={[styles.box, { backgroundColor: item.color }, animatedStyle]}>
-        <TouchableOpacity
-          style={styles.subjectDeleteIcon}
-          onPress={() => confirmDeleteSubject(item.key)}
-        >
-          <Ionicons name="close" size={16} color={iconColor} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.boxContent}
-          onLongPress={drag}
-          disabled={isActive}
-          onPress={() => openSubject(item)}
-        >
-          <Ionicons name={item.icon} size={32} color={iconColor} />
-          <Text style={styles.boxTitle}>{item.title}</Text>
-          {item.notes.length > 0 && (
-            <Text style={styles.boxNote}>{item.notes.length} notes</Text>
-          )}
-        </TouchableOpacity>
-      </Animated.View>
-    );
-  };
-
-  const NoteItem = ({
-    item,
-    drag,
-    isActive,
-  }: RenderItemParams<Note>) => {
-    const shake = useRef(new Animated.Value(0)).current;
-    useEffect(() => {
-      if (isActive) {
-        const anim = Animated.loop(
-          Animated.sequence([
-            Animated.timing(shake, {
-              toValue: 1,
-              duration: 100,
-              useNativeDriver: true,
-            }),
-            Animated.timing(shake, {
-              toValue: -1,
-              duration: 100,
-              useNativeDriver: true,
-            }),
-          ]),
-        );
-        anim.start();
-        return () => anim.stop();
-      }
-      shake.stopAnimation();
-      shake.setValue(0);
-      return undefined;
-    }, [isActive, shake]);
-
-    const animatedStyle = {
-      transform: [
-        {
-          rotate: shake.interpolate({
-            inputRange: [-1, 1],
-            outputRange: ['-3deg', '3deg'],
-          }),
-        },
-        { scale: isActive ? 1.05 : 1 },
-      ],
-    } as const;
-
-    return (
-      <Animated.View
-        style={[styles.noteCard, { backgroundColor: item.color }, animatedStyle]}
-      >
-        <TouchableOpacity
-          style={styles.noteBody}
-          onPress={() => openNote(item)}
-          onLongPress={drag}
-          disabled={isActive}
-        >
-          <Text style={styles.noteTitle}>{item.title}</Text>
-          <Text style={styles.noteDate}>{item.date}</Text>
-          <RenderHTML
-            contentWidth={width}
-            source={{ html: item.text }}
-            baseStyle={styles.noteText}
-            defaultTextProps={{ numberOfLines: 3, ellipsizeMode: 'tail' }}
-          />
-          {item.images?.length ? (
-            item.images.length === 1 ? (
-              <Image
-                source={{ uri: item.images[0] }}
-                style={styles.noteImage}
-                contentFit="contain"
-              />
-            ) : (
-              <View style={styles.imageIconContainer}>
-                <Ionicons name="images" size={20} color={iconColor} />
-              </View>
-            )
-          ) : null}
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.deleteIcon}
-          onPress={() => confirmDeleteNote(item.id)}
-        >
-          <Ionicons name="trash" size={20} color={iconColor} />
-        </TouchableOpacity>
-      </Animated.View>
-    );
-  };
-
   const subjectsWithAdd = useMemo(
     () => [...subjects, { key: 'add-subject' } as Subject],
     [subjects],
@@ -538,7 +375,43 @@ export default function NotesScreen() {
           onDragEnd={({ data }) =>
             setSubjects(data.filter(s => s.key !== 'add-subject'))
           }
-          renderItem={SubjectGridItem}
+          renderItem={({ item, drag, isActive }: RenderItemParams<Subject>) => {
+            if (item.key === 'add-subject') {
+              return (
+                <TouchableOpacity
+                  style={[styles.box, styles.addBox]}
+                  onPress={() => setAddSubjectModalVisible(true)}
+                >
+                  <Ionicons name="add" size={32} color={iconColor} />
+                  <Text style={styles.boxTitle}>ADD</Text>
+                </TouchableOpacity>
+              );
+            }
+            return (
+              <View
+                style={[styles.box, { backgroundColor: item.color }]}
+              >
+                <TouchableOpacity
+                  style={styles.subjectDeleteIcon}
+                  onPress={() => confirmDeleteSubject(item.key)}
+                >
+                  <Ionicons name="close" size={16} color={iconColor} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.boxContent}
+                  onLongPress={drag}
+                  disabled={isActive}
+                  onPress={() => openSubject(item)}
+                >
+                  <Ionicons name={item.icon} size={32} color={iconColor} />
+                  <Text style={styles.boxTitle}>{item.title}</Text>
+                  {item.notes.length > 0 && (
+                    <Text style={styles.boxNote}>{item.notes.length} notes</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            );
+          }}
           contentContainerStyle={styles.grid}
           numColumns={2}
           columnWrapperStyle={{ justifyContent: 'space-between' }}
@@ -652,43 +525,63 @@ export default function NotesScreen() {
                 onPress={() => setShowSubjectColors(!showSubjectColors)}
               />
             </View>
-            <DraggableFlatList
-              data={active.notes}
-              keyExtractor={item => item.id}
-              onDragEnd={({ data }) => {
-                setActive(prev =>
-                  prev && prev.key === active.key ? { ...prev, notes: data } : prev,
-                );
-                setSubjects(prev =>
-                  prev.map(s => (s.key === active.key ? { ...s, notes: data } : s)),
-                );
-              }}
-              renderItem={NoteItem}
-              ListHeaderComponent={
-                showSubjectColors ? (
-                  <View style={styles.colorRow}>
-                    {colorOptions.map(c => (
-                      <TouchableOpacity
-                        key={c}
-                        style={[
-                          styles.colorSwatch,
-                          { backgroundColor: c },
-                          active.color === c && styles.selectedSwatch,
-                        ]}
-                        onPress={() => changeSubjectColor(c)}
-                      />
-                    ))}
-                  </View>
-                ) : null
-              }
-              ListFooterComponent={
-                <TouchableOpacity style={styles.addButton} onPress={() => openNote()}>
-                  <Ionicons name="add" size={20} color={iconColor} />
-                  <Text style={styles.addButtonText}>Add Note</Text>
-                </TouchableOpacity>
-              }
-              contentContainerStyle={styles.modalContent}
-            />
+            <ScrollView contentContainerStyle={styles.modalContent}>
+              {showSubjectColors && (
+                <View style={styles.colorRow}>
+                  {colorOptions.map(c => (
+                    <TouchableOpacity
+                      key={c}
+                      style={[
+                        styles.colorSwatch,
+                        { backgroundColor: c },
+                        active.color === c && styles.selectedSwatch,
+                      ]}
+                      onPress={() => changeSubjectColor(c)}
+                    />
+                  ))}
+                </View>
+              )}
+              {active.notes.map(note => (
+                <View
+                  key={note.id}
+                  style={[styles.noteCard, { backgroundColor: note.color }]}
+                >
+                  <TouchableOpacity style={styles.noteBody} onPress={() => openNote(note)}>
+                    <Text style={styles.noteTitle}>{note.title}</Text>
+                    <Text style={styles.noteDate}>{note.date}</Text>
+                    <RenderHTML
+                      contentWidth={width}
+                      source={{ html: note.text }}
+                      baseStyle={styles.noteText}
+                      defaultTextProps={{ numberOfLines: 3, ellipsizeMode: 'tail' }}
+                    />
+                    {note.images?.length ? (
+                      note.images.length === 1 ? (
+                        <Image
+                          source={{ uri: note.images[0] }}
+                          style={styles.noteImage}
+                          contentFit="contain"
+                        />
+                      ) : (
+                        <View style={styles.imageIconContainer}>
+                          <Ionicons name="images" size={20} color={iconColor} />
+                        </View>
+                      )
+                    ) : null}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.deleteIcon}
+                    onPress={() => confirmDeleteNote(note.id)}
+                  >
+                    <Ionicons name="trash" size={20} color={iconColor} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+              <TouchableOpacity style={styles.addButton} onPress={() => openNote()}>
+                <Ionicons name="add" size={20} color={iconColor} />
+                <Text style={styles.addButtonText}>Add Note</Text>
+              </TouchableOpacity>
+            </ScrollView>
             <TouchableOpacity style={styles.closeButton} onPress={closeSubject}>
               <Text style={styles.closeButtonText}>Close</Text>
             </TouchableOpacity>

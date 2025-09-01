@@ -92,28 +92,12 @@ export default function NotesScreen() {
     History: '#dc2626',
     Art: '#f59e0b',
   };
-  const [subjectColors, setSubjectColors] =
-    useState<Record<string, string>>(defaultColors);
+  const [subjectColors, setSubjectColors] = useState<Record<string, string>>(defaultColors);
+  const [colorMenuSubject, setColorMenuSubject] = useState<string | null>(null);
 
-  const subjectIcons: Record<string, keyof typeof Ionicons.glyphMap> = {
-    Math: 'calculator',
-    English: 'book',
-    Science: 'flask',
-    History: 'time',
-    Art: 'color-palette',
-  };
-
-  const removeSubject = (subject: string) => {
-    setSubjects(prev => prev.filter(s => s !== subject));
-    setSubjectColors(prev => {
-      const updated = { ...prev };
-      delete updated[subject];
-      return updated;
-    });
-    setNotes(prev => prev.filter(n => n.subject !== subject));
-    if (currentSubject === subject) {
-      setCurrentSubject(null);
-    }
+  const selectColor = (subject: string, color: string) => {
+    setSubjectColors(prev => ({ ...prev, [subject]: color }));
+    setColorMenuSubject(null);
   };
 
   const performSearch = () => {
@@ -336,17 +320,26 @@ export default function NotesScreen() {
                     }}
                   >
                     <TouchableOpacity
-                      style={styles.removeIcon}
-                      onPress={() => removeSubject(sub)}
+                      style={styles.colorIcon}
+                      onPress={() =>
+                        setColorMenuSubject(
+                          colorMenuSubject === sub ? null : sub,
+                        )
+                      }
                     >
-                      <Ionicons name="close" size={16} color="#fff" />
+                      <Ionicons name="color-palette" size={16} color="#fff" />
                     </TouchableOpacity>
-                    <Ionicons
-                      name={subjectIcons[sub] || 'book'}
-                      size={32}
-                      color="#fff"
-                      style={styles.subjectIcon}
-                    />
+                    {colorMenuSubject === sub && (
+                      <View style={styles.colorPicker}>
+                        {colorChoices.map(c => (
+                          <TouchableOpacity
+                            key={c}
+                            style={[styles.colorSwatch, { backgroundColor: c }]}
+                            onPress={() => selectColor(sub, c)}
+                          />
+                        ))}
+                      </View>
+                    )}
                     <Text style={styles.subjectText}>{sub}</Text>
                     {count > 0 && (
                       <Text style={styles.noteCount}>Notes: {count}</Text>
@@ -456,10 +449,7 @@ export default function NotesScreen() {
                       setSubjects([...subjects, name]);
                       setSubjectColors(prev => ({
                         ...prev,
-                        [name]:
-                          colorChoices[
-                            Math.floor(Math.random() * colorChoices.length)
-                          ],
+                        [name]: colorChoices[0],
                       }));
                     }
                     setAddingSubject(false);
@@ -513,10 +503,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
   },
   placeholderCube: {
     backgroundColor: 'transparent',
@@ -525,13 +511,28 @@ const styles = StyleSheet.create({
     backgroundColor: '#4b5563',
     flexDirection: 'row',
   },
-  removeIcon: {
+  colorIcon: {
     position: 'absolute',
     top: 6,
     right: 6,
   },
-  subjectIcon: {
-    marginBottom: 8,
+  colorPicker: {
+    position: 'absolute',
+    top: 24,
+    right: 0,
+    backgroundColor: '#fff',
+    padding: 4,
+    borderRadius: 4,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    width: 120,
+    zIndex: 10,
+  },
+  colorSwatch: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    margin: 4,
   },
   subjectText: {
     color: '#fff',

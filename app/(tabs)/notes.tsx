@@ -886,6 +886,8 @@ const createStyles = () => {
     },
     grid: {
       paddingBottom: 16,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
       borderWidth: 1,
       borderColor: inputBorder,
     },
@@ -901,7 +903,7 @@ const createStyles = () => {
       paddingBottom: 16,
     },
     box: {
-      flex: 1,
+      width: '50%',
       borderWidth: 1,
       borderColor: inputBorder,
       padding: 16,

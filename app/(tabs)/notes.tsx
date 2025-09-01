@@ -290,64 +290,46 @@ export default function NotesScreen() {
           </>
         ) : (
           <View style={styles.subjectGrid}>
-            {(() => {
-              const items = [...subjects, 'ADD'];
-              if (items.length % 2 !== 0) items.push('PLACEHOLDER');
-              return items.map(sub => {
-                if (sub === 'ADD') {
-                  return (
-                    <TouchableOpacity
-                      key="ADD"
-                      style={[styles.subjectCube, styles.addCube]}
-                      onPress={() => setAddingSubject(true)}
-                    >
-                      <Ionicons name="add" size={24} color="#fff" />
-                      <Text style={styles.subjectText}>ADD</Text>
-                    </TouchableOpacity>
-                  );
-                }
-                if (sub === 'PLACEHOLDER') {
-                  return <View key="placeholder" style={[styles.subjectCube, styles.placeholderCube]} />;
-                }
-                const count = notes.filter(n => n.subject === sub).length;
-                return (
-                  <TouchableOpacity
-                    key={sub}
-                    style={[styles.subjectCube, { backgroundColor: subjectColors[sub] }]}
-                    onPress={() => {
-                      setCurrentSubject(sub);
-                      setQuery('');
-                    }}
-                  >
-                    <TouchableOpacity
-                      style={styles.colorIcon}
-                      onPress={() =>
-                        setColorMenuSubject(
-                          colorMenuSubject === sub ? null : sub,
-                        )
-                      }
-                    >
-                      <Ionicons name="color-palette" size={16} color="#fff" />
-                    </TouchableOpacity>
-                    {colorMenuSubject === sub && (
-                      <View style={styles.colorPicker}>
-                        {colorChoices.map(c => (
-                          <TouchableOpacity
-                            key={c}
-                            style={[styles.colorSwatch, { backgroundColor: c }]}
-                            onPress={() => selectColor(sub, c)}
-                          />
-                        ))}
-                      </View>
-                    )}
-                    <Text style={styles.subjectText}>{sub}</Text>
-                    {count > 0 && (
-                      <Text style={styles.noteCount}>Notes: {count}</Text>
-                    )}
-                  </TouchableOpacity>
-                );
-              });
-            })()}
+            {subjects.map(sub => (
+              <TouchableOpacity
+                key={sub}
+                style={[styles.subjectCube, { backgroundColor: subjectColors[sub] }]}
+                onPress={() => {
+                  setCurrentSubject(sub);
+                  setQuery('');
+                }}
+              >
+                <TouchableOpacity
+                  style={styles.colorIcon}
+                  onPress={() =>
+                    setColorMenuSubject(
+                      colorMenuSubject === sub ? null : sub,
+                    )
+                  }
+                >
+                  <Ionicons name="color-palette" size={16} color="#fff" />
+                </TouchableOpacity>
+                {colorMenuSubject === sub && (
+                  <View style={styles.colorPicker}>
+                    {colorChoices.map(c => (
+                      <TouchableOpacity
+                        key={c}
+                        style={[styles.colorSwatch, { backgroundColor: c }]}
+                        onPress={() => selectColor(sub, c)}
+                      />
+                    ))}
+                  </View>
+                )}
+                <Text style={styles.subjectText}>{sub}</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={[styles.subjectCube, styles.addCube]}
+              onPress={() => setAddingSubject(true)}
+            >
+              <Ionicons name="add" size={24} color="#fff" />
+              <Text style={styles.subjectText}>ADD</Text>
+            </TouchableOpacity>
           </View>
         )}
         <Modal visible={modalVisible} animationType="none">
@@ -489,23 +471,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   subjectGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
     marginBottom: 16,
   },
   subjectCube: {
-    width: '48%',
+    width: '100%',
     height: 120,
-    borderRadius: 12,
+    borderRadius: 8,
     marginBottom: 16,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
-  },
-  placeholderCube: {
-    backgroundColor: 'transparent',
   },
   addCube: {
     backgroundColor: '#4b5563',
@@ -537,10 +513,6 @@ const styles = StyleSheet.create({
   subjectText: {
     color: '#fff',
     fontWeight: 'bold',
-  },
-  noteCount: {
-    color: '#fff',
-    marginTop: 4,
   },
   selectedHeader: {
     flexDirection: 'row',

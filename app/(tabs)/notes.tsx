@@ -22,7 +22,6 @@ import DraggableFlatList, {
 } from 'react-native-draggable-flatlist'; // eslint-disable-line import/no-unresolved
 import AIButton from '../../components/AIButton';
 import { subjectData, SubjectInfo } from '@/constants/subjects';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type Note = {
   id: string;
@@ -55,7 +54,6 @@ const colorOptions = [
   '#ffeb3b',
 ];
 
-const STORAGE_KEY = 'notes-subjects';
 const initialSubjects: Subject[] = subjectData.map(s => ({ ...s, notes: [] }));
 
 export default function NotesScreen() {
@@ -78,23 +76,6 @@ export default function NotesScreen() {
   const richText = useRef<RichEditor>(null);
   const { width } = useWindowDimensions();
   const { subject: subjectParam } = useLocalSearchParams<{ subject?: string }>();
-
-  useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY).then(stored => {
-      if (stored) {
-        try {
-          const parsed: Subject[] = JSON.parse(stored);
-          setSubjects(parsed);
-        } catch {
-          // ignore malformed data
-        }
-      }
-    });
-  }, []);
-
-  useEffect(() => {
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(subjects));
-  }, [subjects]);
 
   const stripHtml = (html: string) => html.replace(/<[^>]+>/g, '');
   const filteredNotes = useMemo(

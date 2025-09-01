@@ -25,7 +25,6 @@ import {
 } from 'react-native-pell-rich-editor';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
-import { Ionicons } from '@expo/vector-icons';
 
 type Attachment = {
   id: string;
@@ -42,7 +41,7 @@ type Note = {
   id: string;
   title: string;
   content: string;
-  subject: string;
+  tags: string[];
   attachments: Attachment[];
   updatedAt: number;
   history: Version[];
@@ -58,35 +57,8 @@ export default function NotesScreen() {
   const [query, setQuery] = useState('');
   const [current, setCurrent] = useState<Note | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
-  const [currentSubject, setCurrentSubject] = useState<string | null>(null);
   const editorRef = useRef<RichEditor>(null);
   const subjects = ['Math', 'English', 'Science', 'History', 'Art', 'Other'];
-  const colorChoices = [
-    '#6b21a8',
-    '#2563eb',
-    '#16a34a',
-    '#dc2626',
-    '#f59e0b',
-    '#4b5563',
-  ];
-  const defaultColors: Record<string, string> = {
-    Math: '#6b21a8',
-    English: '#2563eb',
-    Science: '#16a34a',
-    History: '#dc2626',
-    Art: '#f59e0b',
-    Other: '#4b5563',
-  };
-  const [subjectColors, setSubjectColors] = useState<Record<string, string>>(defaultColors);
-
-  const cycleSubjectColor = (subject: string) => {
-    setSubjectColors(prev => {
-      const currentColor = prev[subject];
-      const index = colorChoices.indexOf(currentColor);
-      const nextColor = colorChoices[(index + 1) % colorChoices.length];
-      return { ...prev, [subject]: nextColor };
-    });
-  };
 
   // Load notes from the local filesystem on mount.
   useEffect(() => {
@@ -111,21 +83,21 @@ export default function NotesScreen() {
     );
   }, [notes]);
 
-  const filtered = currentSubject
-    ? notes.filter(
-        n =>
-          n.subject === currentSubject &&
-          n.title.toLowerCase().includes(query.toLowerCase()),
-      )
-    : [];
+  const filtered = notes.filter(n => {
+    const q = query.toLowerCase();
+    return (
+      n.title.toLowerCase().includes(q) ||
+      stripHtml(n.content).toLowerCase().includes(q) ||
+      n.tags.some(t => t.toLowerCase().includes(q))
+    );
+  });
 
   const openNew = () => {
-    if (!currentSubject) return;
     const note: Note = {
       id: Date.now().toString(),
       title: '',
       content: '',
-      subject: currentSubject,
+      tags: [],
       attachments: [],
       updatedAt: Date.now(),
       history: [],
@@ -185,7 +157,7 @@ export default function NotesScreen() {
   };
 
   return (
-    <LinearGradient colors={['#1a0033', '#00081f']} style={styles.gradient}>
+    <LinearGradient colors={['#3b0d87', '#0f206c']} style={styles.gradient}>
       <SafeAreaView style={styles.container}>
         <Text style={styles.logo}>CLARITY</Text>
         <TextInput
@@ -195,65 +167,44 @@ export default function NotesScreen() {
           onChangeText={setQuery}
           style={styles.search}
         />
-        {currentSubject ? (
-          <>
-            <View style={styles.selectedHeader}>
-              <TouchableOpacity
-                onPress={() => {
-                  setCurrentSubject(null);
-                  setQuery('');
-                }}
-              >
-                <Ionicons name="arrow-back" size={24} color="#fff" />
-              </TouchableOpacity>
-              <Text style={styles.selectedTitle}>{currentSubject}</Text>
-            </View>
-            <FlatList
-              data={filtered.sort((a, b) => b.updatedAt - a.updatedAt)}
-              keyExtractor={n => n.id}
-              contentContainerStyle={{ padding: 16 }}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.noteCard}
-                  onPress={() => openEdit(item)}
-                  onLongPress={() => deleteNote(item.id)}
-                >
-                  <Text style={styles.noteTitle}>{item.title || 'Untitled'}</Text>
-                  <Text numberOfLines={2} style={styles.notePreview}>
-                    {stripHtml(item.content)}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            />
+        <View style={styles.subjectGrid}>
+          {subjects.map(sub => (
             <TouchableOpacity
-              style={[styles.fab, { backgroundColor: subjectColors[currentSubject!] }]}
-              onPress={openNew}
+              key={sub}
+              style={styles.subjectCube}
+              onPress={() => setQuery(sub)}
             >
-              <Text style={styles.fabText}>+</Text>
+              <Text style={styles.subjectText}>{sub}</Text>
             </TouchableOpacity>
-          </>
-        ) : (
-          <View style={styles.subjectGrid}>
-            {subjects.map(sub => (
-              <TouchableOpacity
-                key={sub}
-                style={[styles.subjectCube, { backgroundColor: subjectColors[sub] }]}
-                onPress={() => {
-                  setCurrentSubject(sub);
-                  setQuery('');
-                }}
-              >
-                <TouchableOpacity
-                  style={styles.colorIcon}
-                  onPress={() => cycleSubjectColor(sub)}
-                >
-                  <Ionicons name="color-palette" size={16} color="#fff" />
-                </TouchableOpacity>
-                <Text style={styles.subjectText}>{sub}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          ))}
+        </View>
+      <FlatList
+        data={filtered.sort((a, b) => b.updatedAt - a.updatedAt)}
+        keyExtractor={n => n.id}
+        contentContainerStyle={{ padding: 16 }}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={styles.noteCard}
+            onPress={() => openEdit(item)}
+            onLongPress={() => deleteNote(item.id)}
+          >
+            <Text style={styles.noteTitle}>{item.title || 'Untitled'}</Text>
+            <Text numberOfLines={2} style={styles.notePreview}>
+              {stripHtml(item.content)}
+            </Text>
+            <View style={styles.tagRow}>
+              {item.tags.map(tag => (
+                <Text key={tag} style={styles.tag}>
+                  #{tag}
+                </Text>
+              ))}
+            </View>
+          </TouchableOpacity>
         )}
+      />
+      <TouchableOpacity style={styles.fab} onPress={openNew}>
+        <Text style={styles.fabText}>+</Text>
+      </TouchableOpacity>
       <Modal visible={modalVisible} animationType="slide">
         <SafeAreaView style={styles.modalContainer}>
           <KeyboardAvoidingView
@@ -290,6 +241,24 @@ export default function NotesScreen() {
                   actions.insertLink,
                   actions.heading1,
                 ]}
+              />
+              <TextInput
+                placeholder="Tags (comma separated)"
+                style={styles.tagsInput}
+                value={current?.tags.join(',')}
+                onChangeText={t =>
+                  setCurrent(c =>
+                    c
+                      ? {
+                          ...c,
+                          tags: t
+                            .split(',')
+                            .map(s => s.trim())
+                            .filter(Boolean),
+                        }
+                      : c,
+                  )
+                }
               />
               <View style={styles.attachments}>
                 {current?.attachments.map(att => (
@@ -358,34 +327,17 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   subjectCube: {
-    width: '48%',
+    width: '30%',
     aspectRatio: 1,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 8,
-    marginBottom: 16,
+    marginBottom: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    position: 'relative',
-  },
-  colorIcon: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
   },
   subjectText: {
     color: '#fff',
     fontWeight: 'bold',
-  },
-  selectedHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 8,
-  },
-  selectedTitle: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginLeft: 8,
   },
   noteCard: {
     backgroundColor: '#fff',
@@ -405,6 +357,15 @@ const styles = StyleSheet.create({
   notePreview: {
     fontSize: 14,
     color: '#555',
+  },
+  tagRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 8,
+  },
+  tag: {
+    marginRight: 8,
+    color: '#6b21a8',
   },
   fab: {
     position: 'absolute',
@@ -437,6 +398,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 8,
     padding: 8,
+  },
+  tagsInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 8,
+    marginTop: 12,
   },
   attachments: {
     flexDirection: 'row',

@@ -41,7 +41,6 @@ type Subject = SubjectInfo & {
 
 type TrashNote = Note & { subjectKey: string; subjectTitle: string };
 
-type GridSubject = Subject | { key: string; empty: true };
 
 const colorOptions = [
   '#3b2e7e',
@@ -58,13 +57,14 @@ const colorOptions = [
   '#ffeb3b',
 ];
 
-const initialSubjects: Subject[] = subjectData.map(s => ({ ...s, notes: [] }));
+const initialSubjects: Subject[] = subjectData
+  .slice(0, 6)
+  .map(s => ({ ...s, notes: [] }));
 
 export default function NotesScreen() {
   const [subjects, setSubjects] = useState<Subject[]>(initialSubjects);
-  const [gridOrder, setGridOrder] = useState<(string | null)[]>(() => [
+  const [gridOrder, setGridOrder] = useState<string[]>(() => [
     ...initialSubjects.map(s => s.key),
-    null,
   ]);
   const [active, setActive] = useState<Subject | null>(null);
   const [noteModalVisible, setNoteModalVisible] = useState(false);
@@ -85,12 +85,11 @@ export default function NotesScreen() {
   const { width } = useWindowDimensions();
   const { subject: subjectParam } = useLocalSearchParams<{ subject?: string }>();
 
-  const gridData = useMemo<GridSubject[]>(
+  const gridData = useMemo<Subject[]>(
     () =>
-      gridOrder.map((key, idx) => {
-        const subject = subjects.find(s => s.key === key);
-        return subject ? subject : { key: `empty-${idx}`, empty: true };
-      }),
+      gridOrder
+        .map(key => subjects.find(s => s.key === key))
+        .filter((s): s is Subject => !!s),
     [gridOrder, subjects],
   );
 
@@ -215,10 +214,7 @@ export default function NotesScreen() {
     const subjectToDelete = subjects.find(s => s.key === key);
     if (!subjectToDelete) return;
     setSubjects(prev => prev.filter(s => s.key !== key));
-    setGridOrder(prev => {
-      const next = prev.map(k => (k === key ? null : k));
-      return next.includes(null) ? next : [...next, null];
-    });
+    setGridOrder(prev => prev.filter(k => k !== key));
     setDeletedSubjects(prev => [...prev, subjectToDelete]);
     setDeletedNotes(prev => [
       ...prev,
@@ -247,17 +243,7 @@ export default function NotesScreen() {
     setDeletedSubjects(prev => prev.filter(s => s.key !== key));
     setDeletedNotes(prev => prev.filter(n => n.subjectKey !== key));
     setSubjects(prev => [...prev, subject]);
-    setGridOrder(prev => {
-      const emptyIndex = prev.findIndex(k => k === null);
-      const next = [...prev];
-      if (emptyIndex !== -1) {
-        next[emptyIndex] = subject.key;
-      } else {
-        next.push(subject.key);
-      }
-      if (!next.includes(null)) next.push(null);
-      return next;
-    });
+    setGridOrder(prev => [...prev, subject.key]);
   };
 
   const restoreNote = (id: string) => {
@@ -333,17 +319,7 @@ export default function NotesScreen() {
       ...(info ? { info } : {}),
     };
     setSubjects(prev => [...prev, newSubject]);
-    setGridOrder(prev => {
-      const emptyIndex = prev.findIndex(k => k === null);
-      const next = [...prev];
-      if (emptyIndex !== -1) {
-        next[emptyIndex] = newSubject.key;
-      } else {
-        next.push(newSubject.key);
-      }
-      if (!next.includes(null)) next.push(null);
-      return next;
-    });
+    setGridOrder(prev => [...prev, newSubject.key]);
     setAddSubjectModalVisible(false);
     setNewSubjectTitle('');
     setNewSubjectColor(colorOptions[0]);
@@ -365,7 +341,7 @@ export default function NotesScreen() {
     item,
     drag,
     isActive,
-  }: RenderItemParams<GridSubject>) => {
+  }: RenderItemParams<Subject>) => {
     const shake = useRef(new Animated.Value(0)).current;
     useEffect(() => {
       if (isActive) {
@@ -402,19 +378,6 @@ export default function NotesScreen() {
         { scale: isActive ? 1.05 : 1 },
       ],
     } as const;
-
-    if ('empty' in item) {
-      return (
-        <View style={[styles.box, styles.emptyBox]}>
-          <TouchableOpacity
-            style={styles.boxContent}
-            onPress={() => setAddSubjectModalVisible(true)}
-          >
-            <Ionicons name="add" size={32} color={iconColor} />
-          </TouchableOpacity>
-        </View>
-      );
-    }
 
     return (
       <ScaleDecorator>
@@ -579,20 +542,10 @@ export default function NotesScreen() {
           keyExtractor={item => item.key}
           onDragEnd={({ from, to }) => {
             setGridOrder(prev => {
-              const next = [...prev];
-              const moved = next[from];
-              next[from] = null;
-              if (next[to] === null) {
-                next[to] = moved;
-              } else {
-                const emptyIndex = next.findIndex(k => k === null);
-                if (emptyIndex !== -1) {
-                  next[emptyIndex] = next[to];
-                }
-                next[to] = moved;
-              }
-              if (!next.includes(null)) next.push(null);
-              return next;
+              const updated = [...prev];
+              const [moved] = updated.splice(from, 1);
+              updated.splice(to, 0, moved);
+              return updated;
             });
           }}
           renderItem={SubjectGridItem}
@@ -918,12 +871,6 @@ const createStyles = () => {
       top: 4,
       right: 4,
       padding: 4,
-    },
-    emptyBox: {
-      borderWidth: 1,
-      borderColor: inputBorder,
-      backgroundColor: 'transparent',
-      justifyContent: 'center',
     },
     boxTitle: {
       marginTop: 8,

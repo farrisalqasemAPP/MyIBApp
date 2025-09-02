@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,11 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import {
+  RichEditor,
+  RichToolbar,
+  actions,
+} from 'react-native-pell-rich-editor';
 
 import AIButton from '@/components/AIButton';
 import { Colors } from '@/constants/Colors';
@@ -19,7 +24,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 type Note = {
   id: string;
   title: string;
-  content: string;
+  content: string; // stored as HTML
+  tags: string[];
+  pinned: boolean;
 };
 
 type NotesBySubject = {
@@ -34,7 +41,9 @@ export default function NotesScreen() {
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [draftTitle, setDraftTitle] = useState('');
   const [draftContent, setDraftContent] = useState('');
+  const [draftTags, setDraftTags] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const richText = useRef<RichEditor>(null);
   const insets = useSafeAreaInsets();
 
   const openSubject = (subject: SubjectInfo) => {
@@ -42,20 +51,30 @@ export default function NotesScreen() {
   };
 
   const startNewNote = () => {
-    setEditingNote({ id: Date.now().toString(), title: '', content: '' });
+    setEditingNote({ id: Date.now().toString(), title: '', content: '', tags: [], pinned: false });
     setDraftTitle('');
     setDraftContent('');
+    setDraftTags('');
   };
 
   const editNote = (note: Note) => {
     setEditingNote(note);
     setDraftTitle(note.title);
     setDraftContent(note.content);
+    setDraftTags(note.tags.join(', '));
   };
 
   const saveNote = () => {
     if (!activeSubject || !editingNote) return;
-    const note = { ...editingNote, title: draftTitle, content: draftContent };
+    const note = {
+      ...editingNote,
+      title: draftTitle,
+      content: draftContent,
+      tags: draftTags
+        .split(',')
+        .map(t => t.trim())
+        .filter(Boolean),
+    };
     setNotes(prev => {
       const subjectNotes = prev[activeSubject.key] || [];
       const index = subjectNotes.findIndex(n => n.id === note.id);
@@ -69,12 +88,14 @@ export default function NotesScreen() {
     setEditingNote(null);
     setDraftTitle('');
     setDraftContent('');
+    setDraftTags('');
   };
 
   const cancelEdit = () => {
     setEditingNote(null);
     setDraftTitle('');
     setDraftContent('');
+    setDraftTags('');
   };
 
   const deleteNote = (id: string) => {
@@ -88,6 +109,20 @@ export default function NotesScreen() {
     });
     cancelEdit();
   };
+
+  const togglePin = (id: string) => {
+    if (!activeSubject) return;
+    setNotes(prev => {
+      const subjectNotes = prev[activeSubject.key] || [];
+      const index = subjectNotes.findIndex(n => n.id === id);
+      if (index >= 0) {
+        subjectNotes[index].pinned = !subjectNotes[index].pinned;
+      }
+      return { ...prev, [activeSubject.key]: [...subjectNotes] };
+    });
+  };
+
+  const stripHtml = (html: string) => html.replace(/<[^>]+>/g, '');
 
   const gradientColors =
     colorScheme === 'light'
@@ -140,23 +175,38 @@ export default function NotesScreen() {
           </View>
           <ScrollView contentContainerStyle={styles.noteList}>
             {(notes[activeSubject.key] || [])
-              .filter(
-                n =>
-                  n.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  n.content.toLowerCase().includes(searchQuery.toLowerCase()),
-              )
+              .filter(n => {
+                const q = searchQuery.toLowerCase();
+                return (
+                  n.title.toLowerCase().includes(q) ||
+                  stripHtml(n.content).toLowerCase().includes(q) ||
+                  n.tags.some(tag => tag.toLowerCase().includes(q))
+                );
+              })
+              .sort((a, b) => Number(b.pinned) - Number(a.pinned))
               .map(n => (
-              <TouchableOpacity
-                key={n.id}
-                style={styles.noteItem}
-                onPress={() => editNote(n)}
-              >
-                <Text style={styles.noteTitle}>{n.title || 'Untitled Note'}</Text>
-                <Text numberOfLines={1} style={styles.notePreview}>
-                  {n.content}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                <View key={n.id} style={styles.noteItem}>
+                  <TouchableOpacity
+                    style={styles.pinButton}
+                    onPress={() => togglePin(n.id)}
+                  >
+                    <Ionicons
+                      name={n.pinned ? 'star' : 'star-outline'}
+                      size={20}
+                      color="#ffd700"
+                    />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={{ flex: 1 }} onPress={() => editNote(n)}>
+                    <Text style={styles.noteTitle}>{n.title || 'Untitled Note'}</Text>
+                    <Text numberOfLines={1} style={styles.notePreview}>
+                      {stripHtml(n.content)}
+                    </Text>
+                    {n.tags.length > 0 && (
+                      <Text style={styles.tagText}>{n.tags.join(', ')}</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              ))}
             <TouchableOpacity
               style={[styles.addNoteButton, { backgroundColor: activeSubject.color }]}
               onPress={startNewNote}
@@ -188,15 +238,25 @@ export default function NotesScreen() {
               style={[styles.input, { color: theme.text, borderColor: activeSubject.color }]}
             />
             <TextInput
-              value={draftContent}
-              onChangeText={setDraftContent}
-              placeholder="Start writing..."
+              value={draftTags}
+              onChangeText={setDraftTags}
+              placeholder="Tags (comma separated)"
               placeholderTextColor={theme.text}
-              style={[
-                styles.textArea,
-                { color: theme.text, borderColor: activeSubject.color },
-              ]}
-              multiline
+              style={[styles.tagInput, { color: theme.text, borderColor: activeSubject.color }]}
+            />
+            <RichEditor
+              ref={richText}
+              initialContentHTML={draftContent}
+              onChange={setDraftContent}
+              placeholder="Start writing..."
+              editorStyle={{ color: theme.text }}
+              style={[styles.richEditor, { borderColor: activeSubject.color }]}
+            />
+            <RichToolbar
+              editor={richText}
+              actions={[actions.setBold, actions.setItalic, actions.insertBulletsList]}
+              style={[styles.richToolbar, { borderColor: activeSubject.color }]}
+              iconTint={activeSubject.color}
             />
           </ScrollView>
           <View style={styles.bottomButtons}>
@@ -285,6 +345,8 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   noteItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.1)',
     padding: 12,
     borderRadius: 8,
@@ -298,6 +360,12 @@ const styles = StyleSheet.create({
   },
   notePreview: {
     color: '#fff',
+  },
+  tagText: {
+    color: '#fff',
+    fontStyle: 'italic',
+    marginTop: 4,
+    fontSize: 12,
   },
   addNoteButton: {
     flexDirection: 'row',
@@ -321,12 +389,25 @@ const styles = StyleSheet.create({
     padding: 8,
     marginBottom: 12,
   },
-  textArea: {
+  tagInput: {
     borderWidth: 1,
     borderRadius: 8,
     padding: 8,
+    marginBottom: 12,
+  },
+  richEditor: {
+    borderWidth: 1,
+    borderRadius: 8,
     minHeight: 200,
-    textAlignVertical: 'top',
+    marginBottom: 12,
+  },
+  richToolbar: {
+    borderWidth: 1,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  pinButton: {
+    marginRight: 8,
   },
   bottomButtons: {
     flexDirection: 'row',

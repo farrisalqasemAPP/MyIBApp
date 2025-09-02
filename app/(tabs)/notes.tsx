@@ -1,1144 +1,250 @@
-import React, {
-  useState,
-  useMemo,
-  useRef,
-  useEffect,
-  useCallback,
-} from 'react';
+import React, { useState } from 'react';
 import {
-  StyleSheet,
-  Text,
   View,
+  Text,
+  StyleSheet,
   ScrollView,
-  FlatList,
   TouchableOpacity,
-  Modal,
-  Alert,
   TextInput,
-  ActivityIndicator,
-  useWindowDimensions,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
-import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { RichEditor, RichToolbar, actions } from 'react-native-pell-rich-editor';
-import RenderHTML from 'react-native-render-html';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import DraggableFlatList, {
-  RenderItemParams,
-} from 'react-native-draggable-flatlist';
-import AIButton from '../../components/AIButton';
-import { subjectData, SubjectInfo } from '@/constants/subjects';
+import { Ionicons } from '@expo/vector-icons';
+
+import AIButton from '@/components/AIButton';
 import { Colors } from '@/constants/Colors';
+import { subjectData, SubjectInfo } from '@/constants/subjects';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
 type Note = {
   id: string;
   title: string;
-  text: string;
-  color: string;
-  date: string;
-  images?: string[];
-  pinned?: boolean;
+  content: string;
 };
 
-type Subject = SubjectInfo & {
-  notes: Note[];
-  info?: string;
+type NotesBySubject = {
+  [key: string]: Note[];
 };
-
-type TrashNote = Note & { subjectKey: string; subjectTitle: string };
-
-const colorOptions = [
-  '#3b2e7e',
-  '#6a0dad',
-  '#1a1a40',
-  '#2e1065',
-  '#007bff',
-  '#28a745',
-  '#dc3545',
-  '#ffc107',
-  '#4caf50',
-  '#2196f3',
-  '#f44336',
-  '#ffeb3b',
-];
-
-const initialSubjects: Subject[] = subjectData.map(s => ({ ...s, notes: [] }));
 
 export default function NotesScreen() {
   const colorScheme = useColorScheme();
-  const [subjects, setSubjects] = useState<Subject[]>(initialSubjects);
-  const [active, setActive] = useState<Subject | null>(null);
-  const [noteModalVisible, setNoteModalVisible] = useState(false);
-  const [currentNote, setCurrentNote] = useState<Note | null>(null);
-  const [showSubjectColors, setShowSubjectColors] = useState(false);
-  const [showNoteColors, setShowNoteColors] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [subjectSearch, setSubjectSearch] = useState('');
-  const [addSubjectModalVisible, setAddSubjectModalVisible] = useState(false);
-  const [newSubjectTitle, setNewSubjectTitle] = useState('');
-  const [newSubjectColor, setNewSubjectColor] = useState(colorOptions[0]);
-  const [deletedSubjects, setDeletedSubjects] = useState<Subject[]>([]);
-  const [deletedNotes, setDeletedNotes] = useState<TrashNote[]>([]);
-  const [trashModalVisible, setTrashModalVisible] = useState(false);
-  const [subjectLoading] = useState(false);
-  const [subjectError] = useState<string | null>(null);
-  const [infoLoading, setInfoLoading] = useState(false);
-  const [infoError, setInfoError] = useState<string | null>(null);
-  const styles = useMemo(() => createStyles(colorScheme), [colorScheme]);
-  const textColor = Colors[colorScheme].text;
-  const iconColor = textColor;
-  const richText = useRef<RichEditor>(null);
-  const { width } = useWindowDimensions();
-  const { subject: subjectParam } = useLocalSearchParams<{ subject?: string }>();
-  const router = useRouter();
+  const theme = Colors[colorScheme];
+  const [activeSubject, setActiveSubject] = useState<SubjectInfo | null>(null);
+  const [notes, setNotes] = useState<NotesBySubject>({});
+  const [editingNote, setEditingNote] = useState<Note | null>(null);
+  const [draftTitle, setDraftTitle] = useState('');
+  const [draftContent, setDraftContent] = useState('');
+
+  const openSubject = (subject: SubjectInfo) => {
+    setActiveSubject(subject);
+  };
+
+  const startNewNote = () => {
+    setEditingNote({ id: Date.now().toString(), title: '', content: '' });
+    setDraftTitle('');
+    setDraftContent('');
+  };
+
+  const editNote = (note: Note) => {
+    setEditingNote(note);
+    setDraftTitle(note.title);
+    setDraftContent(note.content);
+  };
+
+  const saveNote = () => {
+    if (!activeSubject || !editingNote) return;
+    const note = { ...editingNote, title: draftTitle, content: draftContent };
+    setNotes(prev => {
+      const subjectNotes = prev[activeSubject.key] || [];
+      const index = subjectNotes.findIndex(n => n.id === note.id);
+      if (index >= 0) {
+        subjectNotes[index] = note;
+      } else {
+        subjectNotes.push(note);
+      }
+      return { ...prev, [activeSubject.key]: [...subjectNotes] };
+    });
+    setEditingNote(null);
+    setDraftTitle('');
+    setDraftContent('');
+  };
+
+  const cancelEdit = () => {
+    setEditingNote(null);
+    setDraftTitle('');
+    setDraftContent('');
+  };
+
   const gradientColors =
     colorScheme === 'light'
       ? ['#add8e6', '#9370db']
       : ['#2e1065', '#000000'];
 
-  const stripHtml = (html: string) => html.replace(/<[^>]+>/g, '');
-  const filteredNotes = useMemo(
-    () =>
-      subjects
-        .flatMap(s =>
-          s.notes
-            .filter(n => {
-              const q = searchQuery.toLowerCase();
-              return (
-                n.title.toLowerCase().includes(q) ||
-                stripHtml(n.text).toLowerCase().includes(q)
-              );
-            })
-            .map(n => ({ subject: s, note: n })),
-        )
-        .sort((a, b) => Number(b.note.pinned) - Number(a.note.pinned)),
-    [subjects, searchQuery],
-  );
-
-  const filteredSubjectNotes = useMemo(
-    () =>
-      active
-        ? active.notes
-            .filter(n => {
-              const q = subjectSearch.toLowerCase();
-              return (
-                n.title.toLowerCase().includes(q) ||
-                stripHtml(n.text).toLowerCase().includes(q)
-              );
-            })
-            .sort((a, b) => Number(b.pinned) - Number(a.pinned))
-        : [],
-    [active, subjectSearch],
-  );
-
-  // Subjects are no longer pressable, so opening logic is removed
-
-  const closeSubject = useCallback(() => {
-    router.setParams({ subject: undefined });
-    setActive(null);
-    setShowSubjectColors(false);
-  }, [router]);
-
-  const openNote = (note?: Note) => {
-    if (note) {
-      setCurrentNote({
-        ...note,
-        images: note.images || [],
-        pinned: note.pinned ?? false,
-      });
-    } else {
-      setCurrentNote({
-        id: Date.now().toString(),
-        title: '',
-        text: '',
-        color: active?.color || colorOptions[0],
-        date: new Date().toLocaleDateString(),
-        images: [],
-        pinned: false,
-      });
-    }
-    setShowNoteColors(false);
-    setNoteModalVisible(true);
-  };
-
-  const closeNote = () => {
-    setNoteModalVisible(false);
-    setCurrentNote(null);
-    setShowNoteColors(false);
-  };
-
-  const saveNote = (note: Note) => {
-    if (!active) return;
-    setSubjects(prev =>
-      prev.map(s =>
-        s.key === active.key
-          ? {
-              ...s,
-              notes: s.notes.some(n => n.id === note.id)
-                ? s.notes.map(n => (n.id === note.id ? note : n))
-                : [...s.notes, note],
-            }
-          : s,
-      ),
-    );
-    setActive(prev =>
-      prev && prev.key === active.key
-        ? {
-            ...prev,
-            notes: prev.notes.some(n => n.id === note.id)
-              ? prev.notes.map(n => (n.id === note.id ? note : n))
-              : [...prev.notes, note],
-          }
-        : prev,
-    );
-  };
-
-  const togglePinNote = (id: string) => {
-    if (!active) return;
-    setSubjects(prev =>
-      prev.map(s =>
-        s.key === active.key
-          ? {
-              ...s,
-              notes: s.notes.map(n =>
-                n.id === id ? { ...n, pinned: !n.pinned } : n,
-              ),
-            }
-          : s,
-      ),
-    );
-    setActive(prev =>
-      prev && prev.key === active.key
-        ? {
-            ...prev,
-            notes: prev.notes.map(n =>
-              n.id === id ? { ...n, pinned: !n.pinned } : n,
-            ),
-          }
-        : prev,
-    );
-  };
-
-  const deleteNote = (id: string) => {
-    if (!active) return;
-    const noteToDelete = active.notes.find(n => n.id === id);
-    if (!noteToDelete) return;
-    setSubjects(prev =>
-      prev.map(s =>
-        s.key === active.key ? { ...s, notes: s.notes.filter(n => n.id !== id) } : s,
-      ),
-    );
-    setActive(prev =>
-      prev && prev.key === active.key
-        ? { ...prev, notes: prev.notes.filter(n => n.id !== id) }
-        : prev,
-    );
-    setDeletedNotes(prev => [
-      ...prev,
-      {
-        ...noteToDelete,
-        images: noteToDelete.images || [],
-        subjectKey: active.key,
-        subjectTitle: active.title,
-      },
-    ]);
-  };
-
-  const confirmDeleteNote = (id: string, onAfter?: () => void) => {
-    Alert.alert('Delete Note', 'Are you sure you want to delete this note?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () => {
-          deleteNote(id);
-          onAfter?.();
-        },
-      },
-    ]);
-  };
-
-  const deleteSubject = useCallback(
-    (key: string) => {
-      const subjectToDelete = subjects.find(s => s.key === key);
-      if (!subjectToDelete) return;
-      setSubjects(prev => prev.filter(s => s.key !== key));
-      setDeletedSubjects(prev => [...prev, subjectToDelete]);
-      setDeletedNotes(prev => [
-        ...prev,
-        ...subjectToDelete.notes.map(n => ({
-          ...n,
-          images: n.images || [],
-          subjectKey: subjectToDelete.key,
-          subjectTitle: subjectToDelete.title,
-        })),
-      ]);
-      if (active?.key === key) {
-        setActive(null);
-      }
-    },
-    [subjects, active],
-  );
-
-  const confirmDeleteSubject = useCallback(
-    (key: string) => {
-      Alert.alert('Delete Subject', 'Are you sure you want to delete this subject?', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => deleteSubject(key) },
-      ]);
-    },
-    [deleteSubject],
-  );
-
-  const restoreSubject = (key: string) => {
-    const subject = deletedSubjects.find(s => s.key === key);
-    if (!subject) return;
-    setDeletedSubjects(prev => prev.filter(s => s.key !== key));
-    setDeletedNotes(prev => prev.filter(n => n.subjectKey !== key));
-    setSubjects(prev => [...prev, subject]);
-  };
-
-  const restoreNote = (id: string) => {
-    const note = deletedNotes.find(n => n.id === id);
-    if (!note) return;
-    const subjectExists = subjects.find(s => s.key === note.subjectKey);
-    if (!subjectExists) return;
-    const { subjectKey, subjectTitle, images: restoredImages, ...rest } = note;
-    setSubjects(prev =>
-      prev.map(s =>
-        s.key === subjectKey
-          ? { ...s, notes: [...s.notes, { ...rest, images: restoredImages || [] }] }
-          : s,
-      ),
-    );
-    setDeletedNotes(prev => prev.filter(n => n.id !== id));
-  };
-
-  const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 1,
-    });
-    if (!result.canceled && currentNote) {
-      setCurrentNote({
-        ...currentNote,
-        images: [...(currentNote.images || []), result.assets[0].uri],
-      });
-    }
-  };
-
-  const removeImage = (index: number) => {
-    if (!currentNote) return;
-    setCurrentNote({
-      ...currentNote,
-      images: currentNote.images?.filter((_, i) => i !== index) || [],
-    });
-  };
-
-  const changeSubjectColor = (color: string) => {
-    if (!active) return;
-    setSubjects(prev => prev.map(s => (s.key === active.key ? { ...s, color } : s)));
-    setActive(prev => (prev && prev.key === active.key ? { ...prev, color } : prev));
-  };
-
-  const renderSubjectItem = useCallback(
-    ({ item }: RenderItemParams<Subject>) => {
-      if (item.key === 'add-subject') {
-        return (
-          <TouchableOpacity
-            style={[styles.box, styles.addBox]}
-            onPress={() => setAddSubjectModalVisible(true)}
-          >
-            <Ionicons name="add" size={32} color={iconColor} />
-            <Text style={styles.boxTitle}>ADD</Text>
-          </TouchableOpacity>
-        );
-      }
-      return (
-        <View style={[styles.box, { backgroundColor: item.color }]}>
-          <TouchableOpacity
-            style={styles.subjectDeleteIcon}
-            onPress={() => confirmDeleteSubject(item.key)}
-          >
-            <Ionicons name="close" size={16} color={iconColor} />
-          </TouchableOpacity>
-          <View style={styles.boxContent}>
-            <Ionicons name={item.icon} size={32} color={iconColor} />
-            <Text style={styles.boxTitle}>{item.title}</Text>
-            {item.notes.length > 0 && (
-              <Text style={styles.boxNote}>{item.notes.length} notes</Text>
-            )}
-          </View>
-        </View>
-      );
-    },
-    [confirmDeleteSubject, iconColor, styles],
-  );
-
-  const renderNoteCard = ({ item }: { item: Note }) => (
-    <TouchableOpacity
-      style={[styles.noteCard, { backgroundColor: item.color }]}
-      onPress={() => openNote(item)}
-    >
-      <View style={styles.noteCardHeader}>
-        <Text style={styles.noteTitle}>{item.title}</Text>
-        <TouchableOpacity onPress={() => togglePinNote(item.id)}>
-          <Ionicons
-            name={item.pinned ? 'star' : 'star-outline'}
-            size={20}
-            color={iconColor}
-          />
-        </TouchableOpacity>
-      </View>
-      <Text style={styles.noteDate}>{item.date}</Text>
-      <RenderHTML
-        contentWidth={width}
-        source={{ html: item.text }}
-        baseStyle={styles.noteText}
-        defaultTextProps={{ numberOfLines: 3, ellipsizeMode: 'tail' }}
-      />
-      {item.images?.length ? (
-        item.images.length === 1 ? (
-          <Image
-            source={{ uri: item.images[0] }}
-            style={styles.noteImage}
-            contentFit="contain"
-          />
-        ) : (
-          <View style={styles.imageIconContainer}>
-            <Ionicons name="images" size={20} color={iconColor} />
-          </View>
-        )
-      ) : null}
-      <TouchableOpacity
-        style={styles.noteDelete}
-        onPress={() => confirmDeleteNote(item.id)}
-      >
-        <Ionicons name="trash" size={20} color={iconColor} />
-      </TouchableOpacity>
-    </TouchableOpacity>
-  );
-
-  const fetchSubjectInfo = async (title: string) => {
-    try {
-      const res = await fetch(
-        `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`,
-      );
-      if (!res.ok) throw new Error('Request failed');
-      const data = await res.json();
-      return data.extract as string;
-    } catch {
-      return null;
-    }
-  };
-
-  const handleAddSubject = async () => {
-    if (!newSubjectTitle.trim()) return;
-    setInfoError(null);
-    setInfoLoading(true);
-    try {
-      const key =
-        newSubjectTitle.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now().toString();
-      const info = await fetchSubjectInfo(newSubjectTitle.trim());
-      const newSubject: Subject = {
-        key,
-        title: newSubjectTitle.trim(),
-        icon: 'book',
-        color: newSubjectColor,
-        notes: [],
-        ...(info ? { info } : {}),
-      };
-      setSubjects(prev => [...prev, newSubject]);
-      setAddSubjectModalVisible(false);
-      setNewSubjectTitle('');
-      setNewSubjectColor(colorOptions[0]);
-      if (!info) {
-        setInfoError('No info found for this subject.');
-      }
-    } catch {
-      setInfoError('Failed to fetch subject information');
-    } finally {
-      setInfoLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (typeof subjectParam === 'string') {
-      const match = subjects.find(s => s.key === subjectParam);
-      if (match && match.key !== active?.key) {
-        setActive(match);
-      }
-    }
-  }, [subjectParam, subjects, active]);
-
-  const subjectsWithAdd = useMemo(
-    () => [...subjects, { key: 'add-subject' } as Subject],
-    [subjects],
-  );
-
   return (
-    <LinearGradient colors={gradientColors} style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>NOTES</Text>
-        <TouchableOpacity
-          style={styles.trashIcon}
-          onPress={() => setTrashModalVisible(true)}
-        >
-          <Ionicons name="trash" size={24} color={iconColor} />
-        </TouchableOpacity>
-      </View>
-      <TextInput
-        style={styles.searchInput}
-        placeholder="Search notes..."
-        placeholderTextColor="#aaa"
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-      />
-      {subjectError && <Text style={styles.errorText}>{subjectError}</Text>}
-      {subjectLoading && (
-        <ActivityIndicator
-          size="small"
-          color={textColor}
-          style={styles.loading}
-        />
-      )}
-      {searchQuery ? (
-        <ScrollView contentContainerStyle={styles.searchResults}>
-          {filteredNotes.map(({ subject, note }) => (
+    <LinearGradient colors={gradientColors} style={{ flex: 1 }}>
+      {!activeSubject && (
+        <ScrollView contentContainerStyle={styles.subjectList}>
+          {subjectData.map(sub => (
             <TouchableOpacity
-              key={note.id}
-              style={[styles.searchCard, { backgroundColor: note.color }]}
-              onPress={() => {
-                setActive(subject);
-                openNote(note);
-              }}
+              key={sub.key}
+              style={[styles.subjectBox, { backgroundColor: sub.color }]}
+              onPress={() => openSubject(sub)}
             >
-              <Text style={styles.noteTitle}>
-                {note.title}
-                {note.pinned ? ' \u2605' : ''}
-              </Text>
-              <Text style={styles.noteDate}>
-                {note.date} - {subject.title}
-              </Text>
-              <RenderHTML
-                contentWidth={width}
-                source={{ html: note.text }}
-                baseStyle={styles.noteText}
-                defaultTextProps={{ numberOfLines: 3, ellipsizeMode: 'tail' }}
-              />
+              <Ionicons name={sub.icon} size={32} color="#fff" />
+              <Text style={styles.subjectTitle}>{sub.title}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
-      ) : (
-        <DraggableFlatList
-          data={subjectsWithAdd}
-          keyExtractor={item => item.key}
-          onDragEnd={({ data }) =>
-            setSubjects(data.filter(s => s.key !== 'add-subject'))
-          }
-          renderItem={renderSubjectItem}
-          contentContainerStyle={styles.grid}
-          numColumns={2}
-          columnWrapperStyle={{ justifyContent: 'space-between' }}
-        />
       )}
-      <AIButton />
 
-      <Modal visible={trashModalVisible} animationType="slide">
-        <View style={styles.modalContainer}>
-          <Text style={styles.modalTitle}>Trash</Text>
-          <ScrollView contentContainerStyle={styles.modalContent}>
-            {deletedSubjects.length > 0 && (
-              <>
-                <Text style={styles.sectionHeader}>Subjects</Text>
-                {deletedSubjects.map(s => (
-                  <View
-                    key={s.key}
-                    style={[styles.trashCard, { backgroundColor: s.color }]}
-                  >
-                    <Text style={styles.noteTitle}>{s.title}</Text>
-                    <TouchableOpacity
-                      style={styles.restoreButton}
-                      onPress={() => restoreSubject(s.key)}
-                    >
-                      <Text style={styles.saveButtonText}>Restore</Text>
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </>
-            )}
-            {deletedNotes.length > 0 && (
-              <>
-                <Text style={styles.sectionHeader}>Notes</Text>
-                {deletedNotes.map(n => (
-                  <View
-                    key={n.id}
-                    style={[styles.trashCard, { backgroundColor: n.color }]}
-                  >
-                    <Text style={styles.noteTitle}>{n.title}</Text>
-                    <Text style={styles.noteDate}>{n.subjectTitle}</Text>
-                    <TouchableOpacity
-                      style={styles.restoreButton}
-                      onPress={() => restoreNote(n.id)}
-                    >
-                      <Text style={styles.saveButtonText}>Restore</Text>
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </>
-            )}
-            {!deletedSubjects.length && !deletedNotes.length && (
-              <Text style={styles.noteDate}>Trash is empty</Text>
-            )}
-          </ScrollView>
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={() => setTrashModalVisible(false)}
-          >
-            <Text style={styles.closeButtonText}>Close</Text>
-          </TouchableOpacity>
-        </View>
-      </Modal>
-
-      <Modal visible={addSubjectModalVisible} animationType="slide">
-        <View style={styles.addSubjectContainer}>
-          <Text style={styles.modalTitle}>Add Subject</Text>
-          <TextInput
-            style={styles.titleInput}
-            placeholder="Subject Name"
-            placeholderTextColor="#aaa"
-            value={newSubjectTitle}
-            onChangeText={setNewSubjectTitle}
-          />
-          <View style={styles.colorRow}>
-            {colorOptions.map(c => (
-              <TouchableOpacity
-                key={c}
-                style={[
-                  styles.colorSwatch,
-                  { backgroundColor: c },
-                  newSubjectColor === c && styles.selectedSwatch,
-                ]}
-                onPress={() => setNewSubjectColor(c)}
-              />
-            ))}
-          </View>
-          {infoError && <Text style={styles.errorText}>{infoError}</Text>}
-          {infoLoading && (
-            <ActivityIndicator
-              size="small"
-              color={textColor}
-              style={styles.loading}
-            />
-          )}
-          <View style={styles.noteModalButtons}>
-            <TouchableOpacity style={styles.saveButton} onPress={handleAddSubject}>
-              <Text style={styles.saveButtonText}>Save</Text>
+      {activeSubject && !editingNote && (
+        <View style={{ flex: 1 }}>
+          <View style={[styles.subjectHeader, { backgroundColor: activeSubject.color }]}>
+            <TouchableOpacity onPress={() => setActiveSubject(null)}>
+              <Ionicons name="arrow-back" size={24} color="#fff" />
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => setAddSubjectModalVisible(false)}
-            >
-              <Text style={styles.saveButtonText}>Cancel</Text>
-            </TouchableOpacity>
+            <Text style={styles.subjectHeaderTitle}>{activeSubject.title}</Text>
+            <View style={{ width: 24 }} />
           </View>
-        </View>
-      </Modal>
-
-      <Modal visible={!!active} animationType="slide">
-        {active && (
-          <View style={styles.modalContainer}>
-            <View style={[styles.modalHeader, { backgroundColor: active.color }]}> 
-              <View style={styles.headerLeft}>
-                <Ionicons name={active.icon} size={28} color={iconColor} />
-                <Text style={styles.modalTitle}>{active.title}</Text>
-              </View>
+          <ScrollView contentContainerStyle={styles.noteList}>
+            {(notes[activeSubject.key] || []).map(n => (
               <TouchableOpacity
-                style={[styles.colorIndicator, { backgroundColor: active.color }]}
-                onPress={() => setShowSubjectColors(!showSubjectColors)}
-              />
-            </View>
-            <FlatList
-              data={filteredSubjectNotes}
-              keyExtractor={n => n.id}
-              renderItem={renderNoteCard}
-              contentContainerStyle={styles.modalContent}
-              ListHeaderComponent={
-                <View>
-                  {showSubjectColors && (
-                    <View style={styles.colorRow}>
-                      {colorOptions.map(c => (
-                        <TouchableOpacity
-                          key={c}
-                          style={[
-                            styles.colorSwatch,
-                            { backgroundColor: c },
-                            active.color === c && styles.selectedSwatch,
-                          ]}
-                          onPress={() => changeSubjectColor(c)}
-                        />
-                      ))}
-                    </View>
-                  )}
-                  <TextInput
-                    style={styles.searchInput}
-                    placeholder="Search notes..."
-                    placeholderTextColor="#aaa"
-                    value={subjectSearch}
-                    onChangeText={setSubjectSearch}
-                  />
-                </View>
-              }
-              ListFooterComponent={
-                <TouchableOpacity style={styles.addButton} onPress={() => openNote()}>
-                  <Ionicons name="add" size={20} color={iconColor} />
-                  <Text style={styles.addButtonText}>Add Note</Text>
-                </TouchableOpacity>
-              }
-            />
-            <TouchableOpacity style={styles.closeButton} onPress={closeSubject}>
-              <Text style={styles.closeButtonText}>Close</Text>
-            </TouchableOpacity>
-            <AIButton bottomOffset={100} />
-          </View>
-        )}
-      </Modal>
-
-      <Modal visible={noteModalVisible} animationType="slide">
-        {currentNote && (
-          <View style={styles.noteModalContainer}>
-            <Text style={styles.noteDate}>{currentNote.date}</Text>
-            <ScrollView contentContainerStyle={styles.modalContent}>
-              <TextInput
-                style={styles.titleInput}
-                placeholder="Title"
-                placeholderTextColor="#aaa"
-                value={currentNote.title}
-                onChangeText={title => setCurrentNote({ ...currentNote, title })}
-              />
-              <RichEditor
-                ref={richText}
-                initialContentHTML={currentNote.text}
-                editorStyle={{ backgroundColor: 'transparent', color: textColor }}
-                style={styles.richEditor}
-                onChange={text => setCurrentNote({ ...currentNote, text })}
-              />
-              <RichToolbar
-                editor={richText}
-                actions={[
-                  actions.setBold,
-                  actions.setItalic,
-                  actions.setUnderline,
-                  actions.insertBulletsList,
-                  actions.insertOrderedList,
-                  actions.checkboxList,
-                ]}
-                iconTint={iconColor}
-                selectedIconTint={iconColor}
-                style={styles.formatBar}
-              />
-              {currentNote.images?.map((img, idx) => (
-                <View key={img + idx} style={styles.imageContainer}>
-                  <Image
-                    source={{ uri: img }}
-                    style={styles.noteImage}
-                    contentFit="contain"
-                  />
-                  <TouchableOpacity
-                    style={styles.removeImageButton}
-                    onPress={() => removeImage(idx)}
-                  >
-                    <Ionicons name="close-circle" size={20} color="#dc3545" />
-                  </TouchableOpacity>
-                </View>
-              ))}
-              <TouchableOpacity style={styles.imageButton} onPress={pickImage}>
-                <Ionicons name="image" size={20} color={iconColor} />
-                <Text style={styles.addButtonText}>Add Image</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.colorToggle}
-                onPress={() => {
-                  setShowNoteColors(!showNoteColors);
-                }}
+                key={n.id}
+                style={styles.noteItem}
+                onPress={() => editNote(n)}
               >
-                <Ionicons name="color-palette" size={20} color={iconColor} />
-                <Text style={styles.addButtonText}>Colors</Text>
+                <Text style={styles.noteTitle}>{n.title || 'Untitled Note'}</Text>
+                <Text numberOfLines={1} style={styles.notePreview}>
+                  {n.content}
+                </Text>
               </TouchableOpacity>
-              {showNoteColors && (
-                <View style={styles.colorRow}>
-                  {colorOptions.map(c => (
-                    <TouchableOpacity
-                      key={c}
-                      style={[
-                        styles.colorSwatch,
-                        { backgroundColor: c },
-                        currentNote.color === c && styles.selectedSwatch,
-                      ]}
-                      onPress={() => setCurrentNote({ ...currentNote, color: c })}
-                    />
-                  ))}
-                </View>
-              )}
-              <View style={styles.noteModalButtons}>
-                <TouchableOpacity
-                  style={styles.pinButton}
-                  onPress={() =>
-                    setCurrentNote({ ...currentNote, pinned: !currentNote.pinned })
-                  }
-                >
-                  <Text style={styles.saveButtonText}>
-                    {currentNote.pinned ? 'Unpin' : 'Pin'}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.saveButton}
-                  onPress={() => {
-                    saveNote(currentNote);
-                    closeNote();
-                  }}
-                >
-                  <Text style={styles.saveButtonText}>Save</Text>
-                </TouchableOpacity>
-                {active?.notes.some(n => n.id === currentNote.id) && (
-                  <TouchableOpacity
-                    style={styles.deleteButton}
-                    onPress={() => confirmDeleteNote(currentNote.id, closeNote)}
-                  >
-                    <Text style={styles.saveButtonText}>Delete</Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity style={styles.cancelButton} onPress={closeNote}>
-                  <Text style={styles.saveButtonText}>Cancel</Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-            <AIButton bottomOffset={20} size={40} align="right" />
+            ))}
+            <TouchableOpacity
+              style={[styles.addNoteButton, { backgroundColor: activeSubject.color }]}
+              onPress={startNewNote}
+            >
+              <Ionicons name="add" size={24} color="#fff" />
+              <Text style={styles.addNoteText}>New Note</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      )}
+
+      {activeSubject && editingNote && (
+        <View style={{ flex: 1 }}>
+          <View style={[styles.subjectHeader, { backgroundColor: activeSubject.color }]}>
+            <TouchableOpacity onPress={cancelEdit}>
+              <Ionicons name="close" size={24} color="#fff" />
+            </TouchableOpacity>
+            <Text style={styles.subjectHeaderTitle}>
+              {editingNote.title ? 'Edit Note' : 'New Note'}
+            </Text>
+            <TouchableOpacity onPress={saveNote}>
+              <Ionicons name="checkmark" size={24} color="#fff" />
+            </TouchableOpacity>
           </View>
-        )}
-      </Modal>
+          <ScrollView contentContainerStyle={styles.editorContent}>
+            <TextInput
+              value={draftTitle}
+              onChangeText={setDraftTitle}
+              placeholder="Title"
+              placeholderTextColor={theme.text}
+              style={[styles.input, { color: theme.text, borderColor: activeSubject.color }]}
+            />
+            <TextInput
+              value={draftContent}
+              onChangeText={setDraftContent}
+              placeholder="Start writing..."
+              placeholderTextColor={theme.text}
+              style={[styles.textArea, { color: theme.text, borderColor: activeSubject.color }]}
+              multiline
+            />
+          </ScrollView>
+        </View>
+      )}
+
+      <AIButton bottomOffset={20} />
     </LinearGradient>
   );
 }
 
-const createStyles = (colorScheme: 'light' | 'dark') => {
-  const theme = Colors[colorScheme];
-  const isLight = colorScheme === 'light';
-  const textColor = theme.text;
-  const secondaryText = isLight ? '#333' : '#ddd';
-  const background = theme.background;
-  const toggleBg = theme.card;
-  const inputBorder = isLight ? '#ccc' : '#444';
-  const selectedBorder = theme.text;
-  const cancelBg = isLight ? '#e5e5e5' : '#333';
-  return StyleSheet.create({
-    container: {
-      flex: 1,
-      padding: 16,
-      paddingTop: 40,
-    },
-    header: {
-      position: 'relative',
-      alignItems: 'center',
-      marginBottom: 16,
-    },
-    title: {
-      color: textColor,
-      fontSize: 24,
-      fontWeight: 'bold',
-      textAlign: 'center',
-    },
-    trashIcon: {
-      position: 'absolute',
-      right: 0,
-      top: 0,
-      padding: 4,
-    },
-    grid: {
-      paddingBottom: 16,
-    },
-    searchInput: {
-      borderColor: inputBorder,
-      borderWidth: 1,
-      borderRadius: 8,
-      padding: 8,
-      color: textColor,
-      marginBottom: 16,
-    },
-    searchResults: {
-      paddingBottom: 16,
-    },
-    errorText: {
-      color: '#ff6b6b',
-      textAlign: 'center',
-      marginBottom: 8,
-    },
-    loading: {
-      marginBottom: 8,
-    },
-    box: {
-      width: '48%',
-      borderRadius: 12,
-      padding: 16,
-      marginBottom: 12,
-      alignItems: 'center',
-      position: 'relative',
-    },
-    boxContent: {
-      alignItems: 'center',
-    },
-    subjectDeleteIcon: {
-      position: 'absolute',
-      top: 4,
-      right: 4,
-      padding: 4,
-    },
-    addBox: {
-      borderWidth: 1,
-      borderColor: inputBorder,
-      backgroundColor: 'transparent',
-      justifyContent: 'center',
-    },
-    boxTitle: {
-      marginTop: 8,
-      color: textColor,
-      fontSize: 16,
-      fontWeight: 'bold',
-      textAlign: 'center',
-    },
-    boxNote: {
-      marginTop: 8,
-      color: secondaryText,
-      fontSize: 14,
-      textAlign: 'center',
-    },
-    sectionHeader: {
-      color: textColor,
-      fontSize: 18,
-      fontWeight: 'bold',
-      marginTop: 16,
-      marginBottom: 8,
-    },
-    trashCard: {
-      borderRadius: 8,
-      padding: 12,
-      marginBottom: 12,
-    },
-    restoreButton: {
-      marginTop: 8,
-      backgroundColor: '#28a745',
-      padding: 8,
-      borderRadius: 8,
-      alignItems: 'center',
-    },
-    modalContainer: {
-      flex: 1,
-      backgroundColor: background,
-    },
-    modalHeader: {
-      padding: 16,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    headerLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    modalTitle: {
-      marginLeft: 8,
-      color: textColor,
-      fontSize: 20,
-      fontWeight: '600',
-    },
-    modalContent: {
-      padding: 16,
-    },
-    noteCard: {
-      borderRadius: 8,
-      marginBottom: 12,
-      padding: 12,
-      position: 'relative',
-    },
-    searchCard: {
-      borderRadius: 8,
-      marginBottom: 12,
-      padding: 12,
-    },
-    noteCardHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-    },
-    noteDate: {
-      color: textColor,
-      marginBottom: 4,
-      fontSize: 12,
-      textAlign: 'left',
-    },
-    noteText: {
-      color: secondaryText,
-      fontSize: 14,
-      textAlign: 'left',
-    },
-    noteTitle: {
-      color: textColor,
-      fontSize: 16,
-      fontWeight: 'bold',
-      textAlign: 'left',
-      marginBottom: 4,
-    },
-    noteDelete: {
-      position: 'absolute',
-      top: 8,
-      right: 8,
-    },
-    addButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginTop: 16,
-    },
-    imageButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginTop: 16,
-    },
-    addButtonText: {
-      marginLeft: 8,
-      color: textColor,
-    },
-    closeButton: {
-      backgroundColor: theme.tint,
-      padding: 16,
-      alignItems: 'center',
-    },
-    closeButtonText: {
-      color: textColor,
-      fontSize: 16,
-      fontWeight: 'bold',
-    },
-    noteModalContainer: {
-      flex: 1,
-      backgroundColor: background,
-      paddingTop: 32,
-    },
-    addSubjectContainer: {
-      flex: 1,
-      backgroundColor: background,
-      paddingTop: 32,
-      padding: 16,
-    },
-    titleInput: {
-      borderColor: inputBorder,
-      borderWidth: 1,
-      borderRadius: 8,
-      padding: 8,
-      color: textColor,
-      marginBottom: 12,
-    },
-    richEditor: {
-      minHeight: 120,
-      borderColor: inputBorder,
-      borderWidth: 1,
-      borderRadius: 8,
-      padding: 12,
-    },
-    formatBar: {
-      marginTop: 8,
-      backgroundColor: toggleBg,
-      borderRadius: 4,
-    },
-    colorRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      marginTop: 16,
-      marginBottom: 16,
-    },
-    colorSwatch: {
-      width: 30,
-      height: 30,
-      borderRadius: 15,
-      marginRight: 8,
-      marginBottom: 8,
-    },
-    selectedSwatch: {
-      borderWidth: 2,
-      borderColor: selectedBorder,
-    },
-    noteImage: {
-      width: '100%',
-      height: 150,
-      borderRadius: 8,
-      marginBottom: 8,
-    },
-    imageContainer: {
-      position: 'relative',
-      width: '100%',
-      marginBottom: 8,
-    },
-    removeImageButton: {
-      position: 'absolute',
-      top: 4,
-      right: 4,
-      backgroundColor: 'rgba(0,0,0,0.6)',
-      borderRadius: 12,
-      padding: 2,
-    },
-    noteModalButtons: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
-      padding: 16,
-      marginTop: 24,
-    },
-    saveButton: {
-      backgroundColor: theme.tint,
-      padding: 16,
-      borderRadius: 8,
-    },
-    pinButton: {
-      backgroundColor: '#ffc107',
-      padding: 16,
-      borderRadius: 8,
-    },
-    deleteButton: {
-      backgroundColor: '#dc3545',
-      padding: 16,
-      borderRadius: 8,
-    },
-    cancelButton: {
-      backgroundColor: cancelBg,
-      padding: 16,
-      borderRadius: 8,
-    },
-    saveButtonText: {
-      color: textColor,
-      fontSize: 16,
-    },
-    colorToggle: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginTop: 16,
-    },
-    colorIndicator: {
-      width: 24,
-      height: 24,
-      borderRadius: 12,
-      borderWidth: 2,
-      borderColor: textColor,
-    },
-    imageIconContainer: {
-      width: 30,
-      height: 30,
-      borderRadius: 15,
-      backgroundColor: toggleBg,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginTop: 8,
-    },
-  });
-};
+const styles = StyleSheet.create({
+  subjectList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    padding: 16,
+    justifyContent: 'space-between',
+  },
+  subjectBox: {
+    width: '48%',
+    aspectRatio: 1,
+    borderRadius: 12,
+    marginBottom: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  subjectTitle: {
+    marginTop: 8,
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  subjectHeader: {
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  subjectHeaderTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  noteList: {
+    padding: 16,
+  },
+  noteItem: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  noteTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  notePreview: {
+    color: '#fff',
+  },
+  addNoteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  addNoteText: {
+    color: '#fff',
+    marginLeft: 8,
+    fontSize: 16,
+  },
+  editorContent: {
+    padding: 16,
+  },
+  input: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 8,
+    marginBottom: 12,
+  },
+  textArea: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 8,
+    minHeight: 200,
+    textAlignVertical: 'top',
+  },
+});
 

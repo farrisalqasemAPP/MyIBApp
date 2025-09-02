@@ -16,7 +16,6 @@ import AIButton from '@/components/AIButton';
 import { Colors } from '@/constants/Colors';
 import { subjectData, SubjectInfo } from '@/constants/subjects';
 import { useColorScheme, useToggleColorScheme } from '@/hooks/useColorScheme';
-import { useRouter } from 'expo-router';
 
 const cardData = [
   {
@@ -82,7 +81,6 @@ export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const scrollRef = useRef<ScrollView>(null);
   const styles = useMemo(() => createStyles(theme, width), [theme, width]);
-  const router = useRouter();
 
 
   return (
@@ -170,19 +168,6 @@ export default function HomeScreen() {
               <Text style={styles.boxNote}>{section.description}</Text>
             </View>
           ))}
-          <TouchableOpacity
-            style={[styles.notesButton, { backgroundColor: selectedSubject.color }]}
-            onPress={() =>
-              router.push({
-                pathname: '/(tabs)/notes',
-                params: { subject: selectedSubject.key },
-              })
-            }
-          >
-            <Text style={styles.notesButtonText}>
-              Go to {selectedSubject.title} notes
-            </Text>
-          </TouchableOpacity>
         </View>
       </ScrollView>
       <AIButton bottomOffset={20} />
@@ -372,18 +357,6 @@ const createStyles = (
       color: '#ddd',
       fontSize: 14,
       textAlign: 'center',
-    },
-    notesButton: {
-      width: '100%',
-      borderRadius: 12,
-      padding: 16,
-      marginBottom: 12,
-      alignItems: 'center',
-    },
-    notesButtonText: {
-      color: '#fff',
-      fontSize: 16,
-      fontWeight: 'bold',
     },
     modalOverlay: {
       flex: 1,

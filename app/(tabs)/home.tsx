@@ -150,11 +150,12 @@ export default function HomeScreen() {
 
         <View style={styles.sectionList}>
           {overviewSections.map(section => (
-            <View key={section.title} style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>{section.title}</Text>
-              <Text style={styles.sectionDescription}>
-                {section.description}
-              </Text>
+            <View
+              key={section.title}
+              style={[styles.box, { backgroundColor: selectedSubject.color }]}
+            >
+              <Text style={styles.boxTitle}>{section.title}</Text>
+              <Text style={styles.boxNote}>{section.description}</Text>
             </View>
           ))}
         </View>
@@ -319,29 +320,31 @@ const createStyles = (
       fontSize: 16,
     },
     sectionList: {
-      marginBottom: 20,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'space-between',
+      paddingBottom: 16,
     },
-    sectionCard: {
-      backgroundColor: colors.card,
-      padding: 16,
+    box: {
+      width: '48%',
       borderRadius: 12,
+      padding: 16,
       marginBottom: 12,
-      borderWidth: 1,
-      borderColor: colors.tint,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.3,
-      shadowRadius: 4,
-      elevation: 3,
+      alignItems: 'center',
+      position: 'relative',
     },
-    sectionTitle: {
-      color: colors.text,
-      fontWeight: '600',
-      marginBottom: 4,
+    boxTitle: {
+      marginTop: 8,
+      color: '#fff',
+      fontSize: 16,
+      fontWeight: 'bold',
+      textAlign: 'center',
     },
-    sectionDescription: {
-      color: colors.text,
-      fontSize: 12,
+    boxNote: {
+      marginTop: 8,
+      color: '#ddd',
+      fontSize: 14,
+      textAlign: 'center',
     },
     modalOverlay: {
       flex: 1,

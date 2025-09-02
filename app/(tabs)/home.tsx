@@ -80,7 +80,10 @@ export default function HomeScreen() {
   const theme = Colors[colorScheme];
   const { width } = useWindowDimensions();
   const scrollRef = useRef<ScrollView>(null);
-  const styles = useMemo(() => createStyles(theme, width), [theme, width]);
+  const styles = useMemo(
+    () => createStyles(theme, width, colorScheme),
+    [theme, width, colorScheme],
+  );
 
 
   return (
@@ -235,6 +238,7 @@ export default function HomeScreen() {
 const createStyles = (
   colors: typeof Colors.light | typeof Colors.dark,
   width: number,
+  scheme: 'light' | 'dark',
 ) =>
   StyleSheet.create({
     container: {
@@ -345,7 +349,7 @@ const createStyles = (
       alignItems: 'center',
       position: 'relative',
       borderWidth: 4,
-      borderColor: '#fff',
+      borderColor: scheme === 'light' ? '#fff' : '#444',
     },
     boxTitle: {
       marginTop: 8,

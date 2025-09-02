@@ -42,27 +42,32 @@ export default function NotesScreen() {
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [draftTitle, setDraftTitle] = useState('');
   const [draftContent, setDraftContent] = useState('');
-  const [noteSearch, setNoteSearch] = useState('');
-  const [subjectSearch, setSubjectSearch] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [textColor, setTextColor] = useState('#000000');
   const toggleColorScheme = useToggleColorScheme();
   const richText = useRef<RichEditor>(null);
   const insets = useSafeAreaInsets();
 
   const openSubject = (subject: SubjectInfo) => {
     setActiveSubject(subject);
+    setSearchQuery('');
   };
 
   const startNewNote = () => {
     setEditingNote({ id: Date.now().toString(), title: '', content: '', pinned: false });
     setDraftTitle('');
     setDraftContent('');
+    setTextColor('#000000');
+    richText.current?.setForeColor('#000000');
   };
 
   const editNote = (note: Note) => {
     setEditingNote(note);
     setDraftTitle(note.title);
     setDraftContent(note.content);
+    setTextColor('#000000');
+    richText.current?.setForeColor('#000000');
   };
 
   const saveNote = () => {
@@ -91,6 +96,7 @@ export default function NotesScreen() {
     setEditingNote(null);
     setDraftTitle('');
     setDraftContent('');
+    setTextColor('#000000');
   };
 
   const deleteNote = (id: string) => {
@@ -144,19 +150,16 @@ export default function NotesScreen() {
               style={{ marginRight: 8 }}
             />
             <TextInput
-              placeholder="Search subjects..."
+              placeholder="Search notes..."
               placeholderTextColor={theme.text}
               style={[styles.searchInput, { color: theme.text }]}
-              value={subjectSearch}
-              onChangeText={setSubjectSearch}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
             />
           </View>
-          <ScrollView contentContainerStyle={styles.subjectList}>
-            {subjectData
-              .filter(sub =>
-                sub.title.toLowerCase().includes(subjectSearch.toLowerCase()),
-              )
-              .map(sub => (
+          {searchQuery === '' ? (
+            <ScrollView contentContainerStyle={styles.subjectList}>
+              {subjectData.map(sub => (
                 <TouchableOpacity
                   key={sub.key}
                   style={[styles.subjectBox, { backgroundColor: sub.color }]}
@@ -166,14 +169,62 @@ export default function NotesScreen() {
                   <Text style={styles.subjectTitle}>{sub.title}</Text>
                 </TouchableOpacity>
               ))}
-          </ScrollView>
+            </ScrollView>
+          ) : (
+            <ScrollView contentContainerStyle={styles.noteList}>
+              {Object.entries(notes)
+                .flatMap(([key, subjectNotes]) => {
+                  const subject = subjectData.find(s => s.key === key);
+                  return subjectNotes.map(n => ({ ...n, subject }));
+                })
+                .filter(n => {
+                  const q = searchQuery.toLowerCase();
+                  return (
+                    n.title.toLowerCase().includes(q) ||
+                    stripHtml(n.content).toLowerCase().includes(q)
+                  );
+                })
+                .map(n => (
+                  <TouchableOpacity
+                    key={n.id}
+                    style={styles.noteItem}
+                    onPress={() => {
+                      setActiveSubject(n.subject);
+                      editNote(n);
+                    }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.noteTitle, { color: theme.text }]}>
+                        {n.title || 'Untitled Note'}
+                      </Text>
+                      <Text
+                        numberOfLines={1}
+                        style={[styles.notePreview, { color: theme.text }]}
+                      >
+                        {stripHtml(n.content)}
+                      </Text>
+                      <Text
+                        style={{ color: theme.text, fontSize: 12, marginTop: 4 }}
+                      >
+                        {n.subject?.title}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+            </ScrollView>
+          )}
         </View>
       )}
 
       {activeSubject && !editingNote && (
         <View style={{ flex: 1 }}>
           <View style={[styles.subjectHeader, { backgroundColor: activeSubject.color }]}>
-            <TouchableOpacity onPress={() => setActiveSubject(null)}>
+            <TouchableOpacity
+              onPress={() => {
+                setActiveSubject(null);
+                setSearchQuery('');
+              }}
+            >
               <Ionicons name="arrow-back" size={24} color="#fff" />
             </TouchableOpacity>
             <Text style={styles.subjectHeaderTitle}>{activeSubject.title}</Text>
@@ -190,14 +241,14 @@ export default function NotesScreen() {
               placeholder="Search notes..."
               placeholderTextColor={theme.text}
               style={[styles.searchInput, { color: theme.text }]}
-              value={noteSearch}
-              onChangeText={setNoteSearch}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
             />
           </View>
           <ScrollView contentContainerStyle={styles.noteList}>
             {(notes[activeSubject.key] || [])
               .filter(n => {
-                const q = noteSearch.toLowerCase();
+                const q = searchQuery.toLowerCase();
                 return (
                   n.title.toLowerCase().includes(q) ||
                   stripHtml(n.content).toLowerCase().includes(q)
@@ -261,7 +312,7 @@ export default function NotesScreen() {
               initialContentHTML={draftContent}
               onChange={setDraftContent}
               placeholder="Start writing..."
-              editorStyle={{ color: theme.text }}
+              editorStyle={{ color: textColor }}
               style={[styles.richEditor, { borderColor: activeSubject.color }]}
             />
             <RichToolbar
@@ -270,6 +321,24 @@ export default function NotesScreen() {
               style={[styles.richToolbar, { borderColor: activeSubject.color }]}
               iconTint={activeSubject.color}
             />
+            <View style={styles.colorOptions}>
+              {['#000000', '#ff0000', '#0000ff', '#008000'].map(color => (
+                <TouchableOpacity
+                  key={color}
+                  style={[
+                    styles.colorSwatch,
+                    {
+                      backgroundColor: color,
+                      borderColor: color === textColor ? theme.text : 'transparent',
+                    },
+                  ]}
+                  onPress={() => {
+                    richText.current?.setForeColor(color);
+                    setTextColor(color);
+                  }}
+                />
+              ))}
+            </View>
           </ScrollView>
           <View style={styles.bottomButtons}>
             <TouchableOpacity
@@ -429,6 +498,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 8,
     marginBottom: 12,
+  },
+  colorOptions: {
+    flexDirection: 'row',
+    marginBottom: 12,
+  },
+  colorSwatch: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    marginRight: 8,
+    borderWidth: 2,
   },
   pinButton: {
     marginRight: 8,

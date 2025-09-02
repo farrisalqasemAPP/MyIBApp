@@ -344,6 +344,8 @@ const createStyles = (
       marginBottom: 12,
       alignItems: 'center',
       position: 'relative',
+      borderWidth: 4,
+      borderColor: '#fff',
     },
     boxTitle: {
       marginTop: 8,

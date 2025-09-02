@@ -14,6 +14,7 @@ import AIButton from '@/components/AIButton';
 import { Colors } from '@/constants/Colors';
 import { subjectData, SubjectInfo } from '@/constants/subjects';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Note = {
   id: string;
@@ -33,6 +34,8 @@ export default function NotesScreen() {
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [draftTitle, setDraftTitle] = useState('');
   const [draftContent, setDraftContent] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const insets = useSafeAreaInsets();
 
   const openSubject = (subject: SubjectInfo) => {
     setActiveSubject(subject);
@@ -74,6 +77,18 @@ export default function NotesScreen() {
     setDraftContent('');
   };
 
+  const deleteNote = (id: string) => {
+    if (!activeSubject) return;
+    setNotes(prev => {
+      const subjectNotes = prev[activeSubject.key] || [];
+      return {
+        ...prev,
+        [activeSubject.key]: subjectNotes.filter(n => n.id !== id),
+      };
+    });
+    cancelEdit();
+  };
+
   const gradientColors =
     colorScheme === 'light'
       ? ['#add8e6', '#9370db']
@@ -81,6 +96,14 @@ export default function NotesScreen() {
 
   return (
     <LinearGradient colors={gradientColors} style={{ flex: 1 }}>
+      <View style={[styles.mainHeader, { paddingTop: insets.top + 10 }]}> 
+        <TouchableOpacity>
+          <Ionicons name="settings-outline" size={24} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.mainHeaderTitle}>CLARITY</Text>
+        <View style={{ width: 24 }} />
+      </View>
+
       {!activeSubject && (
         <ScrollView contentContainerStyle={styles.subjectList}>
           {subjectData.map(sub => (
@@ -105,8 +128,24 @@ export default function NotesScreen() {
             <Text style={styles.subjectHeaderTitle}>{activeSubject.title}</Text>
             <View style={{ width: 24 }} />
           </View>
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color="#fff" style={{ marginRight: 8 }} />
+            <TextInput
+              placeholder="Search notes..."
+              placeholderTextColor="#fff"
+              style={styles.searchInput}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
           <ScrollView contentContainerStyle={styles.noteList}>
-            {(notes[activeSubject.key] || []).map(n => (
+            {(notes[activeSubject.key] || [])
+              .filter(
+                n =>
+                  n.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  n.content.toLowerCase().includes(searchQuery.toLowerCase()),
+              )
+              .map(n => (
               <TouchableOpacity
                 key={n.id}
                 style={styles.noteItem}
@@ -138,9 +177,7 @@ export default function NotesScreen() {
             <Text style={styles.subjectHeaderTitle}>
               {editingNote.title ? 'Edit Note' : 'New Note'}
             </Text>
-            <TouchableOpacity onPress={saveNote}>
-              <Ionicons name="checkmark" size={24} color="#fff" />
-            </TouchableOpacity>
+            <View style={{ width: 24 }} />
           </View>
           <ScrollView contentContainerStyle={styles.editorContent}>
             <TextInput
@@ -155,10 +192,31 @@ export default function NotesScreen() {
               onChangeText={setDraftContent}
               placeholder="Start writing..."
               placeholderTextColor={theme.text}
-              style={[styles.textArea, { color: theme.text, borderColor: activeSubject.color }]}
+              style={[
+                styles.textArea,
+                { color: theme.text, borderColor: activeSubject.color },
+              ]}
               multiline
             />
           </ScrollView>
+          <View style={styles.bottomButtons}>
+            <TouchableOpacity
+              style={[styles.bottomButton, { backgroundColor: activeSubject.color }]}
+              onPress={saveNote}
+            >
+              <Ionicons name="checkmark" size={24} color="#fff" />
+              <Text style={styles.bottomButtonText}>Save</Text>
+            </TouchableOpacity>
+            {notes[activeSubject.key]?.some(n => n.id === editingNote.id) && (
+              <TouchableOpacity
+                style={[styles.bottomButton, { backgroundColor: 'red' }]}
+                onPress={() => deleteNote(editingNote.id)}
+              >
+                <Ionicons name="trash" size={24} color="#fff" />
+                <Text style={styles.bottomButtonText}>Delete</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       )}
 
@@ -173,6 +231,18 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     padding: 16,
     justifyContent: 'space-between',
+  },
+  mainHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+  },
+  mainHeaderTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: 'bold',
   },
   subjectBox: {
     width: '48%',
@@ -198,6 +268,18 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: '600',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    margin: 16,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  searchInput: {
+    flex: 1,
+    color: '#fff',
   },
   noteList: {
     padding: 16,
@@ -245,6 +327,23 @@ const styles = StyleSheet.create({
     padding: 8,
     minHeight: 200,
     textAlignVertical: 'top',
+  },
+  bottomButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
+    padding: 16,
+  },
+  bottomButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  bottomButtonText: {
+    color: '#fff',
+    marginLeft: 8,
+    fontWeight: '600',
   },
 });
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Colors } from '@/constants/Colors';
+import { useColorScheme } from '@/hooks/useColorScheme';
 
 type Book = { key: string; title: string; author_name?: string[] };
 
@@ -16,6 +17,8 @@ export default function LibraryScreen() {
   const [query, setQuery] = useState('');
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(false);
+  const colorScheme = useColorScheme();
+  const styles = useMemo(() => createStyles(colorScheme), [colorScheme]);
 
   const search = async () => {
     if (!query.trim()) return;
@@ -39,7 +42,7 @@ export default function LibraryScreen() {
         <TextInput
           style={styles.input}
           placeholder="Search Open Library"
-          placeholderTextColor={Colors.dark.icon}
+          placeholderTextColor={Colors[colorScheme].icon}
           value={query}
           onChangeText={setQuery}
           onSubmitEditing={search}
@@ -49,7 +52,10 @@ export default function LibraryScreen() {
         </TouchableOpacity>
       </View>
       {loading ? (
-        <ActivityIndicator color={Colors.dark.tint} style={{ marginTop: 20 }} />
+        <ActivityIndicator
+          color={Colors[colorScheme].tint}
+          style={{ marginTop: 20 }}
+        />
       ) : (
         <ScrollView style={styles.results}>
           {books.map(book => (
@@ -66,26 +72,31 @@ export default function LibraryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.dark.background, padding: 16 },
-  searchRow: { flexDirection: 'row', marginBottom: 12 },
-  input: {
-    flex: 1,
-    backgroundColor: Colors.dark.card,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    color: Colors.dark.text,
-  },
-  button: {
-    marginLeft: 8,
-    backgroundColor: Colors.dark.tint,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    justifyContent: 'center',
-  },
-  buttonText: { color: '#fff', fontWeight: '600' },
-  results: { flex: 1 },
-  resultItem: { marginBottom: 12 },
-  resultTitle: { color: Colors.dark.text, fontWeight: '600' },
-  resultAuthor: { color: Colors.dark.icon },
-});
+const createStyles = (colorScheme: 'light' | 'dark') =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: Colors[colorScheme].background,
+      padding: 16,
+    },
+    searchRow: { flexDirection: 'row', marginBottom: 12 },
+    input: {
+      flex: 1,
+      backgroundColor: Colors[colorScheme].card,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      color: Colors[colorScheme].text,
+    },
+    button: {
+      marginLeft: 8,
+      backgroundColor: Colors[colorScheme].tint,
+      borderRadius: 8,
+      paddingHorizontal: 16,
+      justifyContent: 'center',
+    },
+    buttonText: { color: '#fff', fontWeight: '600' },
+    results: { flex: 1 },
+    resultItem: { marginBottom: 12 },
+    resultTitle: { color: Colors[colorScheme].text, fontWeight: '600' },
+    resultAuthor: { color: Colors[colorScheme].icon },
+  });

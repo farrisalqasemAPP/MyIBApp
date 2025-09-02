@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Colors } from '@/constants/Colors';
+import { useColorScheme } from '@/hooks/useColorScheme';
 
 const eventColorOptions = [
   '#FF6633', '#FFB399', '#FF33FF', '#FFFF99', '#00B3E6', '#E6B333',
@@ -39,6 +41,13 @@ export default function ScheduleScreen() {
   const [currentEvents, setCurrentEvents] = useState<Event[]>([]);
   const [newEvent, setNewEvent] = useState('');
   const [newEventColor, setNewEventColor] = useState(eventColorOptions[0]);
+  const colorScheme = useColorScheme();
+  const styles = useMemo(() => createStyles(colorScheme), [colorScheme]);
+  const textColor = Colors[colorScheme].text;
+  const gradientColors =
+    colorScheme === 'light'
+      ? ['#add8e6', '#9370db']
+      : ['#2e1065', '#000'];
 
   const month = currentDate.getMonth();
   const year = currentDate.getFullYear();
@@ -104,14 +113,16 @@ export default function ScheduleScreen() {
   };
 
   return (
-    <LinearGradient colors={["#2e1065", "#000"]} style={styles.container}>
+    <LinearGradient colors={gradientColors} style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => setCurrentDate(new Date(year, month - 1, 1))}>
-          <Ionicons name="chevron-back" size={24} color="#fff" />
+          <Ionicons name="chevron-back" size={24} color={textColor} />
         </TouchableOpacity>
-        <Text style={styles.title}>{getMonthName(currentDate)} {year}</Text>
+        <Text style={styles.title}>
+          {getMonthName(currentDate)} {year}
+        </Text>
         <TouchableOpacity onPress={() => setCurrentDate(new Date(year, month + 1, 1))}>
-          <Ionicons name="chevron-forward" size={24} color="#fff" />
+          <Ionicons name="chevron-forward" size={24} color={textColor} />
         </TouchableOpacity>
       </View>
 
@@ -177,7 +188,7 @@ export default function ScheduleScreen() {
                   <View key={idx} style={styles.noteItem}>
                     <Text style={styles.noteText}>{note}</Text>
                     <TouchableOpacity onPress={() => deleteNote(idx)}>
-                      <Ionicons name="trash" size={16} color="#fff" />
+                      <Ionicons name="trash" size={16} color={textColor} />
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -201,7 +212,7 @@ export default function ScheduleScreen() {
                     />
                     <Text style={styles.eventText}>{ev.text}</Text>
                     <TouchableOpacity onPress={() => deleteEvent(idx)}>
-                      <Ionicons name="trash" size={16} color="#fff" />
+                      <Ionicons name="trash" size={16} color={textColor} />
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -252,156 +263,157 @@ export default function ScheduleScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, paddingTop: 60 },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 16,
-  },
-  title: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  weekRow: {
-    flexDirection: 'row',
-  },
-  weekDay: {
-    flex: 1,
-    textAlign: 'center',
-    color: '#fff',
-    fontWeight: '600',
-  },
-  calendar: {
-    flex: 1,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  dayCell: {
-    width: '14.2857%',
-    height: '16.66%',
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  dayText: {
-    color: '#fff',
-  },
-  eventBackgroundContainer: {
-    ...StyleSheet.absoluteFillObject,
-    flexDirection: 'row',
-    borderRadius: 8,
-  },
-  todayCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: '#1a1a40',
-    padding: 16,
-    paddingTop: 60,
-  },
-  modalTitle: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 16,
-  },
-  input: {
-    borderColor: '#444',
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 8,
-    color: '#fff',
-    marginBottom: 12,
-  },
-  eventsList: {
-    maxHeight: 120,
-    marginBottom: 12,
-  },
-  eventItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  eventColor: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 6,
-  },
-  eventText: {
-    color: '#fff',
-    flex: 1,
-  },
-  colorOptions: {
-    marginBottom: 12,
-  },
-  colorOption: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    marginRight: 8,
-  },
-  selectedColor: {
-    borderWidth: 2,
-    borderColor: '#fff',
-  },
-  notesList: {
-    maxHeight: 120,
-    marginBottom: 12,
-  },
-  noteItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  noteText: {
-    color: '#fff',
-    flex: 1,
-    marginRight: 6,
-  },
-  addButton: {
-    backgroundColor: '#2e1065',
-    padding: 8,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  addButtonText: {
-    color: '#fff',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  saveButton: {
-    backgroundColor: '#2e1065',
-    padding: 12,
-    borderRadius: 8,
-    flex: 1,
-    marginRight: 8,
-    alignItems: 'center',
-  },
-  cancelButton: {
-    backgroundColor: '#333',
-    padding: 12,
-    borderRadius: 8,
-    flex: 1,
-    alignItems: 'center',
-  },
-  saveButtonText: {
-    color: '#fff',
-  },
-});
+const createStyles = (colorScheme: 'light' | 'dark') =>
+  StyleSheet.create({
+    container: { flex: 1, paddingTop: 60 },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      marginBottom: 16,
+    },
+    title: {
+      color: Colors[colorScheme].text,
+      fontSize: 20,
+      fontWeight: 'bold',
+    },
+    weekRow: {
+      flexDirection: 'row',
+    },
+    weekDay: {
+      flex: 1,
+      textAlign: 'center',
+      color: Colors[colorScheme].text,
+      fontWeight: '600',
+    },
+    calendar: {
+      flex: 1,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+    },
+    dayCell: {
+      width: '14.2857%',
+      height: '16.66%',
+      borderRadius: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
+    },
+    dayText: {
+      color: Colors[colorScheme].text,
+    },
+    eventBackgroundContainer: {
+      ...StyleSheet.absoluteFillObject,
+      flexDirection: 'row',
+      borderRadius: 8,
+    },
+    todayCircle: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      borderWidth: 2,
+      borderColor: Colors[colorScheme].text,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    modalContainer: {
+      flex: 1,
+      backgroundColor: Colors[colorScheme].background,
+      padding: 16,
+      paddingTop: 60,
+    },
+    modalTitle: {
+      color: Colors[colorScheme].text,
+      fontSize: 20,
+      fontWeight: '600',
+      marginBottom: 16,
+    },
+    input: {
+      borderColor: colorScheme === 'light' ? '#ccc' : '#444',
+      borderWidth: 1,
+      borderRadius: 8,
+      padding: 8,
+      color: Colors[colorScheme].text,
+      marginBottom: 12,
+    },
+    eventsList: {
+      maxHeight: 120,
+      marginBottom: 12,
+    },
+    eventItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 4,
+    },
+    eventColor: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      marginRight: 6,
+    },
+    eventText: {
+      color: Colors[colorScheme].text,
+      flex: 1,
+    },
+    colorOptions: {
+      marginBottom: 12,
+    },
+    colorOption: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      marginRight: 8,
+    },
+    selectedColor: {
+      borderWidth: 2,
+      borderColor: Colors[colorScheme].text,
+    },
+    notesList: {
+      maxHeight: 120,
+      marginBottom: 12,
+    },
+    noteItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 4,
+    },
+    noteText: {
+      color: Colors[colorScheme].text,
+      flex: 1,
+      marginRight: 6,
+    },
+    addButton: {
+      backgroundColor: Colors[colorScheme].tint,
+      padding: 8,
+      borderRadius: 8,
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    addButtonText: {
+      color: '#fff',
+    },
+    modalButtons: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+    },
+    saveButton: {
+      backgroundColor: Colors[colorScheme].tint,
+      padding: 12,
+      borderRadius: 8,
+      flex: 1,
+      marginRight: 8,
+      alignItems: 'center',
+    },
+    cancelButton: {
+      backgroundColor: colorScheme === 'light' ? '#e5e5e5' : '#333',
+      padding: 12,
+      borderRadius: 8,
+      flex: 1,
+      alignItems: 'center',
+    },
+    saveButtonText: {
+      color: '#fff',
+    },
+  });

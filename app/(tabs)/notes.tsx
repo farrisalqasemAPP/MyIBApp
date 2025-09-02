@@ -83,8 +83,8 @@ export default function NotesScreen() {
   const [deletedSubjects, setDeletedSubjects] = useState<Subject[]>([]);
   const [deletedNotes, setDeletedNotes] = useState<TrashNote[]>([]);
   const [trashModalVisible, setTrashModalVisible] = useState(false);
-  const [subjectLoading, setSubjectLoading] = useState(false);
-  const [subjectError, setSubjectError] = useState<string | null>(null);
+  const [subjectLoading] = useState(false);
+  const [subjectError] = useState<string | null>(null);
   const [infoLoading, setInfoLoading] = useState(false);
   const [infoError, setInfoError] = useState<string | null>(null);
   const styles = useMemo(() => createStyles(colorScheme), [colorScheme]);
@@ -134,28 +134,7 @@ export default function NotesScreen() {
     [active, subjectSearch],
   );
 
-  // Debounced handler to avoid rapid double navigation when a subject is pressed
-  const openingRef = useRef(false);
-  const openSubject = useCallback(
-    async (subject: Subject) => {
-      if (openingRef.current) return; // ignore rapid double taps
-      openingRef.current = true;
-      setSubjectError(null);
-      setSubjectLoading(true);
-      try {
-        // ensure we always pass a fresh reference and update route params
-        setActive(prev => (prev?.key === subject.key ? prev : subject));
-        router.setParams({ subject: subject.key });
-      } catch {
-        setSubjectError('Failed to load subject');
-      } finally {
-        setShowSubjectColors(false);
-        setSubjectLoading(false);
-        openingRef.current = false;
-      }
-    },
-    [router],
-  );
+  // Subjects are no longer pressable, so opening logic is removed
 
   const closeSubject = useCallback(() => {
     router.setParams({ subject: undefined });
@@ -367,7 +346,7 @@ export default function NotesScreen() {
   };
 
   const renderSubjectItem = useCallback(
-    ({ item, drag, isActive }: RenderItemParams<Subject>) => {
+    ({ item }: RenderItemParams<Subject>) => {
       if (item.key === 'add-subject') {
         return (
           <TouchableOpacity
@@ -380,29 +359,25 @@ export default function NotesScreen() {
         );
       }
       return (
-        <View style={[styles.box, { backgroundColor: item.color }]}> 
+        <View style={[styles.box, { backgroundColor: item.color }]}>
           <TouchableOpacity
             style={styles.subjectDeleteIcon}
             onPress={() => confirmDeleteSubject(item.key)}
           >
             <Ionicons name="close" size={16} color={iconColor} />
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.boxContent}
-            onLongPress={drag}
-            disabled={isActive}
-            onPress={() => openSubject(item)}
-          >
+          <View style={styles.boxContent}>
             <Ionicons name={item.icon} size={32} color={iconColor} />
             <Text style={styles.boxTitle}>{item.title}</Text>
+            <Text style={styles.boxNote}>Go to {item.title} notes</Text>
             {item.notes.length > 0 && (
               <Text style={styles.boxNote}>{item.notes.length} notes</Text>
             )}
-          </TouchableOpacity>
+          </View>
         </View>
       );
     },
-    [confirmDeleteSubject, openSubject, iconColor, styles],
+    [confirmDeleteSubject, iconColor, styles],
   );
 
   const renderNoteCard = ({ item }: { item: Note }) => (

@@ -10,6 +10,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import AIButton from '@/components/AIButton';
 import { Colors } from '@/constants/Colors';
@@ -81,7 +82,10 @@ export default function HomeScreen() {
 
 
   return (
-    <View style={styles.container}>
+    <LinearGradient
+      colors={isLightMode ? ['#add8e6', '#9370db'] : ['#2e1065', '#000000']}
+      style={styles.container}
+    >
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -215,7 +219,7 @@ export default function HomeScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -226,7 +230,6 @@ const createStyles = (
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.background,
     },
     content: {
       paddingHorizontal: 20,

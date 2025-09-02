@@ -1,4 +1,10 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, {
+  useState,
+  useMemo,
+  useRef,
+  useEffect,
+  useCallback,
+} from 'react';
 import {
   StyleSheet,
   Text,
@@ -9,6 +15,7 @@ import {
   Modal,
   Alert,
   TextInput,
+  ActivityIndicator,
   useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,7 +24,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { RichEditor, RichToolbar, actions } from 'react-native-pell-rich-editor';
 import RenderHTML from 'react-native-render-html';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import DraggableFlatList, {
   RenderItemParams,
 } from 'react-native-draggable-flatlist';
@@ -73,12 +80,17 @@ export default function NotesScreen() {
   const [deletedSubjects, setDeletedSubjects] = useState<Subject[]>([]);
   const [deletedNotes, setDeletedNotes] = useState<TrashNote[]>([]);
   const [trashModalVisible, setTrashModalVisible] = useState(false);
+  const [subjectLoading, setSubjectLoading] = useState(false);
+  const [subjectError, setSubjectError] = useState<string | null>(null);
+  const [infoLoading, setInfoLoading] = useState(false);
+  const [infoError, setInfoError] = useState<string | null>(null);
   const styles = useMemo(() => createStyles(), []);
   const textColor = '#fff';
   const iconColor = textColor;
   const richText = useRef<RichEditor>(null);
   const { width } = useWindowDimensions();
   const { subject: subjectParam } = useLocalSearchParams<{ subject?: string }>();
+  const router = useRouter();
 
   const stripHtml = (html: string) => html.replace(/<[^>]+>/g, '');
   const filteredNotes = useMemo(
@@ -115,14 +127,34 @@ export default function NotesScreen() {
     [active, subjectSearch],
   );
 
-  const openSubject = (subject: Subject) => {
-    setActive(subject);
-    setShowSubjectColors(false);
-  };
-  const closeSubject = () => {
+  // Debounced handler to avoid rapid double navigation when a subject is pressed
+  const openingRef = useRef(false);
+  const openSubject = useCallback(
+    async (subject: Subject) => {
+      if (openingRef.current) return; // ignore rapid double taps
+      openingRef.current = true;
+      setSubjectError(null);
+      setSubjectLoading(true);
+      try {
+        // ensure we always pass a fresh reference and update route params
+        setActive(prev => (prev?.key === subject.key ? prev : subject));
+        router.setParams({ subject: subject.key });
+      } catch {
+        setSubjectError('Failed to load subject');
+      } finally {
+        setShowSubjectColors(false);
+        setSubjectLoading(false);
+        openingRef.current = false;
+      }
+    },
+    [router],
+  );
+
+  const closeSubject = useCallback(() => {
+    router.setParams({ subject: undefined });
     setActive(null);
     setShowSubjectColors(false);
-  };
+  }, [router]);
 
   const openNote = (note?: Note) => {
     if (note) {
@@ -243,31 +275,37 @@ export default function NotesScreen() {
     ]);
   };
 
-  const deleteSubject = (key: string) => {
-    const subjectToDelete = subjects.find(s => s.key === key);
-    if (!subjectToDelete) return;
-    setSubjects(prev => prev.filter(s => s.key !== key));
-    setDeletedSubjects(prev => [...prev, subjectToDelete]);
-    setDeletedNotes(prev => [
-      ...prev,
-      ...subjectToDelete.notes.map(n => ({
-        ...n,
-        images: n.images || [],
-        subjectKey: subjectToDelete.key,
-        subjectTitle: subjectToDelete.title,
-      })),
-    ]);
-    if (active?.key === key) {
-      setActive(null);
-    }
-  };
+  const deleteSubject = useCallback(
+    (key: string) => {
+      const subjectToDelete = subjects.find(s => s.key === key);
+      if (!subjectToDelete) return;
+      setSubjects(prev => prev.filter(s => s.key !== key));
+      setDeletedSubjects(prev => [...prev, subjectToDelete]);
+      setDeletedNotes(prev => [
+        ...prev,
+        ...subjectToDelete.notes.map(n => ({
+          ...n,
+          images: n.images || [],
+          subjectKey: subjectToDelete.key,
+          subjectTitle: subjectToDelete.title,
+        })),
+      ]);
+      if (active?.key === key) {
+        setActive(null);
+      }
+    },
+    [subjects, active],
+  );
 
-  const confirmDeleteSubject = (key: string) => {
-    Alert.alert('Delete Subject', 'Are you sure you want to delete this subject?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => deleteSubject(key) },
-    ]);
-  };
+  const confirmDeleteSubject = useCallback(
+    (key: string) => {
+      Alert.alert('Delete Subject', 'Are you sure you want to delete this subject?', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => deleteSubject(key) },
+      ]);
+    },
+    [deleteSubject],
+  );
 
   const restoreSubject = (key: string) => {
     const subject = deletedSubjects.find(s => s.key === key);
@@ -321,6 +359,45 @@ export default function NotesScreen() {
     setActive(prev => (prev && prev.key === active.key ? { ...prev, color } : prev));
   };
 
+  const renderSubjectItem = useCallback(
+    ({ item, drag, isActive }: RenderItemParams<Subject>) => {
+      if (item.key === 'add-subject') {
+        return (
+          <TouchableOpacity
+            style={[styles.box, styles.addBox]}
+            onPress={() => setAddSubjectModalVisible(true)}
+          >
+            <Ionicons name="add" size={32} color={iconColor} />
+            <Text style={styles.boxTitle}>ADD</Text>
+          </TouchableOpacity>
+        );
+      }
+      return (
+        <View style={[styles.box, { backgroundColor: item.color }]}> 
+          <TouchableOpacity
+            style={styles.subjectDeleteIcon}
+            onPress={() => confirmDeleteSubject(item.key)}
+          >
+            <Ionicons name="close" size={16} color={iconColor} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.boxContent}
+            onLongPress={drag}
+            disabled={isActive}
+            onPress={() => openSubject(item)}
+          >
+            <Ionicons name={item.icon} size={32} color={iconColor} />
+            <Text style={styles.boxTitle}>{item.title}</Text>
+            {item.notes.length > 0 && (
+              <Text style={styles.boxNote}>{item.notes.length} notes</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      );
+    },
+    [confirmDeleteSubject, openSubject, iconColor, styles],
+  );
+
   const renderNoteCard = ({ item }: { item: Note }) => (
     <TouchableOpacity
       style={[styles.noteCard, { backgroundColor: item.color }]}
@@ -370,46 +447,52 @@ export default function NotesScreen() {
       const res = await fetch(
         `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`,
       );
-      if (res.ok) {
-        const data = await res.json();
-        return data.extract as string;
-      }
+      if (!res.ok) throw new Error('Request failed');
+      const data = await res.json();
+      return data.extract as string;
     } catch {
       return null;
     }
-    return null;
   };
 
   const handleAddSubject = async () => {
     if (!newSubjectTitle.trim()) return;
-    const key =
-      newSubjectTitle.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now().toString();
-    const info = await fetchSubjectInfo(newSubjectTitle.trim());
-    const newSubject: Subject = {
-      key,
-      title: newSubjectTitle.trim(),
-      icon: 'book',
-      color: newSubjectColor,
-      notes: [],
-      ...(info ? { info } : {}),
-    };
-    setSubjects(prev => [...prev, newSubject]);
-    setAddSubjectModalVisible(false);
-    setNewSubjectTitle('');
-    setNewSubjectColor(colorOptions[0]);
-    if (!info) {
-      Alert.alert('No info found', 'Could not find information on this subject online.');
+    setInfoError(null);
+    setInfoLoading(true);
+    try {
+      const key =
+        newSubjectTitle.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now().toString();
+      const info = await fetchSubjectInfo(newSubjectTitle.trim());
+      const newSubject: Subject = {
+        key,
+        title: newSubjectTitle.trim(),
+        icon: 'book',
+        color: newSubjectColor,
+        notes: [],
+        ...(info ? { info } : {}),
+      };
+      setSubjects(prev => [...prev, newSubject]);
+      setAddSubjectModalVisible(false);
+      setNewSubjectTitle('');
+      setNewSubjectColor(colorOptions[0]);
+      if (!info) {
+        setInfoError('No info found for this subject.');
+      }
+    } catch {
+      setInfoError('Failed to fetch subject information');
+    } finally {
+      setInfoLoading(false);
     }
   };
 
   useEffect(() => {
     if (typeof subjectParam === 'string') {
       const match = subjects.find(s => s.key === subjectParam);
-      if (match) {
+      if (match && match.key !== active?.key) {
         setActive(match);
       }
     }
-  }, [subjectParam, subjects]);
+  }, [subjectParam, subjects, active]);
 
   const subjectsWithAdd = useMemo(
     () => [...subjects, { key: 'add-subject' } as Subject],
@@ -437,6 +520,10 @@ export default function NotesScreen() {
         value={searchQuery}
         onChangeText={setSearchQuery}
       />
+      {subjectError && <Text style={styles.errorText}>{subjectError}</Text>}
+      {subjectLoading && (
+        <ActivityIndicator size="small" color="#fff" style={styles.loading} />
+      )}
       {searchQuery ? (
         <ScrollView contentContainerStyle={styles.searchResults}>
           {filteredNotes.map(({ subject, note }) => (
@@ -471,43 +558,7 @@ export default function NotesScreen() {
           onDragEnd={({ data }) =>
             setSubjects(data.filter(s => s.key !== 'add-subject'))
           }
-          renderItem={({ item, drag, isActive }: RenderItemParams<Subject>) => {
-            if (item.key === 'add-subject') {
-              return (
-                <TouchableOpacity
-                  style={[styles.box, styles.addBox]}
-                  onPress={() => setAddSubjectModalVisible(true)}
-                >
-                  <Ionicons name="add" size={32} color={iconColor} />
-                  <Text style={styles.boxTitle}>ADD</Text>
-                </TouchableOpacity>
-              );
-            }
-            return (
-              <View
-                style={[styles.box, { backgroundColor: item.color }]}
-              >
-                <TouchableOpacity
-                  style={styles.subjectDeleteIcon}
-                  onPress={() => confirmDeleteSubject(item.key)}
-                >
-                  <Ionicons name="close" size={16} color={iconColor} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.boxContent}
-                  onLongPress={drag}
-                  disabled={isActive}
-                  onPress={() => openSubject(item)}
-                >
-                  <Ionicons name={item.icon} size={32} color={iconColor} />
-                  <Text style={styles.boxTitle}>{item.title}</Text>
-                  {item.notes.length > 0 && (
-                    <Text style={styles.boxNote}>{item.notes.length} notes</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            );
-          }}
+          renderItem={renderSubjectItem}
           contentContainerStyle={styles.grid}
           numColumns={2}
           columnWrapperStyle={{ justifyContent: 'space-between' }}
@@ -594,6 +645,10 @@ export default function NotesScreen() {
               />
             ))}
           </View>
+          {infoError && <Text style={styles.errorText}>{infoError}</Text>}
+          {infoLoading && (
+            <ActivityIndicator size="small" color="#fff" style={styles.loading} />
+          )}
           <View style={styles.noteModalButtons}>
             <TouchableOpacity style={styles.saveButton} onPress={handleAddSubject}>
               <Text style={styles.saveButtonText}>Save</Text>
@@ -828,6 +883,14 @@ const createStyles = () => {
     },
     searchResults: {
       paddingBottom: 16,
+    },
+    errorText: {
+      color: '#ff6b6b',
+      textAlign: 'center',
+      marginBottom: 8,
+    },
+    loading: {
+      marginBottom: 8,
     },
     box: {
       width: '48%',

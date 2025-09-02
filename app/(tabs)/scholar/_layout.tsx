@@ -3,19 +3,21 @@ import { createMaterialTopTabNavigator } from '@react-navigation/material-top-ta
 import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '@/constants/Colors';
+import { useColorScheme } from '@/hooks/useColorScheme';
 
 const { Navigator } = createMaterialTopTabNavigator();
 const TopTabs = withLayoutContext(Navigator);
 
 export default function ScholarLayout() {
   const insets = useSafeAreaInsets();
+  const colorScheme = useColorScheme();
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.dark.background }}>
+    <View style={{ flex: 1, backgroundColor: Colors[colorScheme].background }}>
       <View style={{ paddingTop: insets.top + 10, paddingBottom: 10 }}>
         <Text
           style={{
-            color: Colors.dark.text,
+            color: Colors[colorScheme].text,
             textAlign: 'center',
             fontSize: 20,
             fontWeight: 'bold',
@@ -26,10 +28,10 @@ export default function ScholarLayout() {
       </View>
       <TopTabs
         screenOptions={{
-          tabBarActiveTintColor: Colors.dark.tint,
-          tabBarIndicatorStyle: { backgroundColor: Colors.dark.tint },
+          tabBarActiveTintColor: Colors[colorScheme].tint,
+          tabBarIndicatorStyle: { backgroundColor: Colors[colorScheme].tint },
           tabBarStyle: {
-            backgroundColor: Colors.dark.background,
+            backgroundColor: Colors[colorScheme].background,
           },
           tabBarLabelStyle: { marginTop: 10 },
         }}

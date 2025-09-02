@@ -30,6 +30,8 @@ import DraggableFlatList, {
 } from 'react-native-draggable-flatlist';
 import AIButton from '../../components/AIButton';
 import { subjectData, SubjectInfo } from '@/constants/subjects';
+import { Colors } from '@/constants/Colors';
+import { useColorScheme } from '@/hooks/useColorScheme';
 
 type Note = {
   id: string;
@@ -66,6 +68,7 @@ const colorOptions = [
 const initialSubjects: Subject[] = subjectData.map(s => ({ ...s, notes: [] }));
 
 export default function NotesScreen() {
+  const colorScheme = useColorScheme();
   const [subjects, setSubjects] = useState<Subject[]>(initialSubjects);
   const [active, setActive] = useState<Subject | null>(null);
   const [noteModalVisible, setNoteModalVisible] = useState(false);
@@ -84,13 +87,17 @@ export default function NotesScreen() {
   const [subjectError, setSubjectError] = useState<string | null>(null);
   const [infoLoading, setInfoLoading] = useState(false);
   const [infoError, setInfoError] = useState<string | null>(null);
-  const styles = useMemo(() => createStyles(), []);
-  const textColor = '#fff';
+  const styles = useMemo(() => createStyles(colorScheme), [colorScheme]);
+  const textColor = Colors[colorScheme].text;
   const iconColor = textColor;
   const richText = useRef<RichEditor>(null);
   const { width } = useWindowDimensions();
   const { subject: subjectParam } = useLocalSearchParams<{ subject?: string }>();
   const router = useRouter();
+  const gradientColors =
+    colorScheme === 'light'
+      ? ['#add8e6', '#9370db']
+      : ['#2e1065', '#000000'];
 
   const stripHtml = (html: string) => html.replace(/<[^>]+>/g, '');
   const filteredNotes = useMemo(
@@ -500,10 +507,7 @@ export default function NotesScreen() {
   );
 
   return (
-    <LinearGradient
-      colors={['#2e1065', '#000000']}
-      style={styles.container}
-    >
+    <LinearGradient colors={gradientColors} style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>NOTES</Text>
         <TouchableOpacity
@@ -522,7 +526,11 @@ export default function NotesScreen() {
       />
       {subjectError && <Text style={styles.errorText}>{subjectError}</Text>}
       {subjectLoading && (
-        <ActivityIndicator size="small" color="#fff" style={styles.loading} />
+        <ActivityIndicator
+          size="small"
+          color={textColor}
+          style={styles.loading}
+        />
       )}
       {searchQuery ? (
         <ScrollView contentContainerStyle={styles.searchResults}>
@@ -647,7 +655,11 @@ export default function NotesScreen() {
           </View>
           {infoError && <Text style={styles.errorText}>{infoError}</Text>}
           {infoLoading && (
-            <ActivityIndicator size="small" color="#fff" style={styles.loading} />
+            <ActivityIndicator
+              size="small"
+              color={textColor}
+              style={styles.loading}
+            />
           )}
           <View style={styles.noteModalButtons}>
             <TouchableOpacity style={styles.saveButton} onPress={handleAddSubject}>
@@ -839,14 +851,16 @@ export default function NotesScreen() {
   );
 }
 
-const createStyles = () => {
-  const textColor = '#fff';
-  const secondaryText = '#ddd';
-  const background = '#1a1a40';
-  const toggleBg = '#2e1065';
-  const inputBorder = '#444';
-  const selectedBorder = '#fff';
-  const cancelBg = '#333';
+const createStyles = (colorScheme: 'light' | 'dark') => {
+  const theme = Colors[colorScheme];
+  const isLight = colorScheme === 'light';
+  const textColor = theme.text;
+  const secondaryText = isLight ? '#333' : '#ddd';
+  const background = theme.background;
+  const toggleBg = theme.card;
+  const inputBorder = isLight ? '#ccc' : '#444';
+  const selectedBorder = theme.text;
+  const cancelBg = isLight ? '#e5e5e5' : '#333';
   return StyleSheet.create({
     container: {
       flex: 1,
@@ -1024,7 +1038,7 @@ const createStyles = () => {
       color: textColor,
     },
     closeButton: {
-      backgroundColor: '#2e1065',
+      backgroundColor: theme.tint,
       padding: 16,
       alignItems: 'center',
     },
@@ -1107,7 +1121,7 @@ const createStyles = () => {
       marginTop: 24,
     },
     saveButton: {
-      backgroundColor: '#2e1065',
+      backgroundColor: theme.tint,
       padding: 16,
       borderRadius: 8,
     },

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   ScrollView,
   Text,
@@ -8,11 +8,14 @@ import {
   StyleSheet,
 } from 'react-native';
 import { Colors } from '@/constants/Colors';
+import { useColorScheme } from '@/hooks/useColorScheme';
 
 export default function PlannerScreen() {
   const [prompt, setPrompt] = useState('');
   const [plan, setPlan] = useState('');
   const [loading, setLoading] = useState(false);
+  const colorScheme = useColorScheme();
+  const styles = useMemo(() => createStyles(colorScheme), [colorScheme]);
 
   const generatePlan = async () => {
     if (!prompt.trim()) return;
@@ -58,7 +61,7 @@ export default function PlannerScreen() {
       <TextInput
         style={styles.input}
         placeholder="Describe what you need help studying..."
-        placeholderTextColor={Colors.dark.icon}
+        placeholderTextColor={Colors[colorScheme].icon}
         value={prompt}
         onChangeText={setPrompt}
         multiline
@@ -66,30 +69,40 @@ export default function PlannerScreen() {
       <TouchableOpacity style={styles.button} onPress={generatePlan}>
         <Text style={styles.buttonText}>Generate Plan</Text>
       </TouchableOpacity>
-      {loading && <ActivityIndicator color={Colors.dark.tint} style={{ marginTop: 20 }} />}
+      {loading && (
+        <ActivityIndicator
+          color={Colors[colorScheme].tint}
+          style={{ marginTop: 20 }}
+        />
+      )}
       {plan ? <Text style={styles.plan}>{plan}</Text> : null}
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { padding: 16, backgroundColor: Colors.dark.background, flexGrow: 1 },
-  disclaimer: { color: Colors.dark.text, marginBottom: 12, fontSize: 14 },
-  input: {
-    backgroundColor: Colors.dark.card,
-    color: Colors.dark.text,
-    padding: 12,
-    borderRadius: 8,
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  button: {
-    marginTop: 12,
-    backgroundColor: Colors.dark.tint,
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  buttonText: { color: '#fff', fontWeight: '600' },
-  plan: { marginTop: 20, color: Colors.dark.text, fontSize: 14 },
-});
+const createStyles = (colorScheme: 'light' | 'dark') =>
+  StyleSheet.create({
+    container: {
+      padding: 16,
+      backgroundColor: Colors[colorScheme].background,
+      flexGrow: 1,
+    },
+    disclaimer: { color: Colors[colorScheme].text, marginBottom: 12, fontSize: 14 },
+    input: {
+      backgroundColor: Colors[colorScheme].card,
+      color: Colors[colorScheme].text,
+      padding: 12,
+      borderRadius: 8,
+      minHeight: 80,
+      textAlignVertical: 'top',
+    },
+    button: {
+      marginTop: 12,
+      backgroundColor: Colors[colorScheme].tint,
+      borderRadius: 8,
+      paddingVertical: 12,
+      alignItems: 'center',
+    },
+    buttonText: { color: '#fff', fontWeight: '600' },
+    plan: { marginTop: 20, color: Colors[colorScheme].text, fontSize: 14 },
+  });

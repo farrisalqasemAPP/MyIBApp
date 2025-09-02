@@ -1,6 +1,13 @@
-import { useColorScheme as _useColorScheme } from 'react-native';
+import { useTheme } from './ThemeContext';
 
-// Return the device color scheme, defaulting to light when unavailable.
+// Return the current color scheme from context.
 export function useColorScheme() {
-  return _useColorScheme() ?? 'light';
+  const { colorScheme } = useTheme();
+  return colorScheme;
+}
+
+// Hook to toggle between light and dark modes.
+export function useToggleColorScheme() {
+  const { toggleColorScheme } = useTheme();
+  return toggleColorScheme;
 }

@@ -369,7 +369,6 @@ export default function NotesScreen() {
           <View style={styles.boxContent}>
             <Ionicons name={item.icon} size={32} color={iconColor} />
             <Text style={styles.boxTitle}>{item.title}</Text>
-            <Text style={styles.boxNote}>Go to {item.title} notes</Text>
             {item.notes.length > 0 && (
               <Text style={styles.boxNote}>{item.notes.length} notes</Text>
             )}

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Modal, View, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { ColorPicker, fromHsv } from 'react-native-color-picker';
 import DrawingCanvas, { DrawingElement } from './DrawingCanvas';
 
 interface Props {
@@ -19,6 +18,7 @@ export default function DrawingBoardModal({
   setElements,
 }: Props) {
   const [color, setColor] = useState('#000000');
+  const COLORS = ['#000000', '#ff0000', '#0000ff', '#008000'];
   const canvasSize = 2000;
 
   const pickImage = async () => {
@@ -63,12 +63,21 @@ export default function DrawingBoardModal({
           </ScrollView>
         </ScrollView>
         <View style={styles.toolbar}>
-          <ColorPicker
-            color={color}
-            onColorChange={c => setColor(fromHsv(c))}
-            hideSliders
-            style={styles.colorPicker}
-          />
+          <View style={styles.colorPalette}>
+            {COLORS.map(c => (
+              <TouchableOpacity
+                key={c}
+                style={[
+                  styles.colorSwatch,
+                  {
+                    backgroundColor: c,
+                    borderColor: c === color ? '#fff' : 'transparent',
+                  },
+                ]}
+                onPress={() => setColor(c)}
+              />
+            ))}
+          </View>
           <TouchableOpacity onPress={pickImage}>
             <Ionicons name="image" size={24} color="#fff" />
           </TouchableOpacity>
@@ -93,8 +102,14 @@ const styles = StyleSheet.create({
     padding: 10,
     backgroundColor: 'rgba(0,0,0,0.6)',
   },
-  colorPicker: {
-    width: 150,
-    height: 150,
+  colorPalette: {
+    flexDirection: 'row',
+  },
+  colorSwatch: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    marginHorizontal: 4,
+    borderWidth: 2,
   },
 });

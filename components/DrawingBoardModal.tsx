@@ -60,9 +60,10 @@ export default function DrawingBoardModal({
             <DrawingCanvas
               elements={elements}
               setElements={setElements}
-              strokeColor={eraser ? '#ffffff' : color}
+              strokeColor={color}
               strokeWidth={strokeWidth}
               canvasSize={canvasSize}
+              eraser={eraser}
             />
           </ScrollView>
         </ScrollView>

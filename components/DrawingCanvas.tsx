@@ -14,7 +14,6 @@ interface DrawingCanvasProps {
   strokeWidth?: number;
   editable?: boolean;
   canvasSize?: number;
-  eraser?: boolean;
 }
 
 export default function DrawingCanvas({
@@ -24,7 +23,6 @@ export default function DrawingCanvas({
   strokeWidth = 4,
   editable = true,
   canvasSize = 2000,
-  eraser = false,
 }: DrawingCanvasProps) {
   const [currentPath, setCurrentPath] = useState('');
   const pointsRef = useRef<{ x: number; y: number }[]>([]);
@@ -89,6 +87,7 @@ export default function DrawingCanvas({
           );
         } else {
           pointsRef.current.push({ x: locationX, y: locationY });
+          setCurrentPath(lineGenerator(pointsRef.current) ?? '');
         }
       },
       onPanResponderRelease: () => {
@@ -99,7 +98,7 @@ export default function DrawingCanvas({
         }
         if (pointsRef.current.length && setElements) {
           const path = lineGenerator(pointsRef.current) ?? '';
-          const width = eraser ? 20 : strokeWidthRef.current;
+          const width = strokeWidthRef.current;
           setElements(prev => [
             ...prev,
             { type: 'path', d: path, color: strokeColorRef.current, width },
@@ -110,23 +109,6 @@ export default function DrawingCanvas({
       },
     }),
   ).current;
-
-  useEffect(() => {
-    let frameId: number;
-    const interval = 1000 / 120;
-    let last = 0;
-    const frame = (time: number) => {
-      if (time - last >= interval) {
-        if (pointsRef.current.length) {
-          setCurrentPath(lineGenerator(pointsRef.current) ?? '');
-        }
-        last = time;
-      }
-      frameId = requestAnimationFrame(frame);
-    };
-    frameId = requestAnimationFrame(frame);
-    return () => cancelAnimationFrame(frameId);
-  }, [lineGenerator]);
 
   return (
     <View
@@ -166,7 +148,7 @@ export default function DrawingCanvas({
           <Path
             d={currentPath}
             stroke={strokeColor}
-            strokeWidth={eraser ? 20 : strokeWidth}
+            strokeWidth={strokeWidth}
             fill="none"
             strokeLinecap="round"
             strokeLinejoin="round"

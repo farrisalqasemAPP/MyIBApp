@@ -19,7 +19,9 @@ export default function DrawingBoardModal({
 }: Props) {
   const [color, setColor] = useState('#000000');
   const [eraser, setEraser] = useState(false);
+  const [strokeWidth, setStrokeWidth] = useState(4);
   const COLORS = ['#000000', '#ff0000', '#0000ff', '#008000'];
+  const SIZES = [4, 8, 12, 16];
   const canvasSize = 2000;
 
   const pickImage = async () => {
@@ -59,8 +61,8 @@ export default function DrawingBoardModal({
               elements={elements}
               setElements={setElements}
               strokeColor={eraser ? '#ffffff' : color}
+              strokeWidth={strokeWidth}
               canvasSize={canvasSize}
-              eraser={eraser}
             />
           </ScrollView>
         </ScrollView>
@@ -77,6 +79,24 @@ export default function DrawingBoardModal({
                   },
                 ]}
                 onPress={() => setColor(c)}
+              />
+            ))}
+          </View>
+          <View style={styles.sizePalette}>
+            {SIZES.map(s => (
+              <TouchableOpacity
+                key={s}
+                style={[
+                  styles.sizeSwatch,
+                  {
+                    width: s,
+                    height: s,
+                    borderRadius: s / 2,
+                    backgroundColor: '#fff',
+                    borderColor: s === strokeWidth ? '#fff' : 'transparent',
+                  },
+                ]}
+                onPress={() => setStrokeWidth(s)}
               />
             ))}
           </View>
@@ -113,6 +133,13 @@ const styles = StyleSheet.create({
   },
   colorPalette: {
     flexDirection: 'row',
+  },
+  sizePalette: {
+    flexDirection: 'row',
+  },
+  sizeSwatch: {
+    marginHorizontal: 4,
+    borderWidth: 2,
   },
   colorSwatch: {
     width: 30,

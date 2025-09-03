@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Modal, View, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, FontAwesome } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import DrawingCanvas, { DrawingElement } from './DrawingCanvas';
 
@@ -18,6 +18,7 @@ export default function DrawingBoardModal({
   setElements,
 }: Props) {
   const [color, setColor] = useState('#000000');
+  const [eraser, setEraser] = useState(false);
   const COLORS = ['#000000', '#ff0000', '#0000ff', '#008000'];
   const canvasSize = 2000;
 
@@ -57,8 +58,9 @@ export default function DrawingBoardModal({
             <DrawingCanvas
               elements={elements}
               setElements={setElements}
-              strokeColor={color}
+              strokeColor={eraser ? '#ffffff' : color}
               canvasSize={canvasSize}
+              eraser={eraser}
             />
           </ScrollView>
         </ScrollView>
@@ -78,6 +80,13 @@ export default function DrawingBoardModal({
               />
             ))}
           </View>
+          <TouchableOpacity onPress={() => setEraser(e => !e)}>
+            {eraser ? (
+              <Ionicons name="pencil" size={24} color="#fff" />
+            ) : (
+              <FontAwesome name="eraser" size={24} color="#fff" />
+            )}
+          </TouchableOpacity>
           <TouchableOpacity onPress={pickImage}>
             <Ionicons name="image" size={24} color="#fff" />
           </TouchableOpacity>

@@ -4,7 +4,7 @@ import Svg, { Path } from 'react-native-svg';
 import { line as d3Line, curveBasis } from 'd3-shape';
 
 export type DrawingElement =
-  | { type: 'path'; d: string; color: string }
+  | { type: 'path'; d: string; color: string; width?: number }
   | { type: 'image'; uri: string; x: number; y: number; width: number; height: number };
 
 interface DrawingCanvasProps {
@@ -14,6 +14,7 @@ interface DrawingCanvasProps {
   strokeWidth?: number;
   editable?: boolean;
   canvasSize?: number;
+  eraser?: boolean;
 }
 
 export default function DrawingCanvas({
@@ -23,14 +24,22 @@ export default function DrawingCanvas({
   strokeWidth = 4,
   editable = true,
   canvasSize = 2000,
+  eraser = false,
 }: DrawingCanvasProps) {
   const [currentPath, setCurrentPath] = useState('');
   const pointsRef = useRef<{ x: number; y: number }[]>([]);
   const strokeColorRef = useRef(strokeColor);
+  const strokeWidthRef = useRef(strokeWidth);
+  const selectedImageRef = useRef<number | null>(null);
+  const dragOffset = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
     strokeColorRef.current = strokeColor;
   }, [strokeColor]);
+
+  useEffect(() => {
+    strokeWidthRef.current = strokeWidth;
+  }, [strokeWidth]);
 
   const lineGenerator = useRef(
     d3Line<{ x: number; y: number }>()
@@ -45,22 +54,55 @@ export default function DrawingCanvas({
       onPanResponderGrant: evt => {
         if (!editable) return;
         const { locationX, locationY } = evt.nativeEvent;
+        const imgIndex = elements.findIndex(
+          e =>
+            e.type === 'image' &&
+            locationX >= e.x &&
+            locationX <= e.x + e.width &&
+            locationY >= e.y &&
+            locationY <= e.y + e.height,
+        );
+        if (imgIndex !== -1) {
+          selectedImageRef.current = imgIndex;
+          const img = elements[imgIndex] as Extract<DrawingElement, { type: 'image' }>;
+          dragOffset.current = { x: locationX - img.x, y: locationY - img.y };
+          return;
+        }
         pointsRef.current = [{ x: locationX, y: locationY }];
         setCurrentPath(lineGenerator(pointsRef.current) ?? '');
       },
       onPanResponderMove: evt => {
         if (!editable) return;
         const { locationX, locationY } = evt.nativeEvent;
-        pointsRef.current.push({ x: locationX, y: locationY });
-        setCurrentPath(lineGenerator(pointsRef.current) ?? '');
+        if (selectedImageRef.current !== null && setElements) {
+          const index = selectedImageRef.current;
+          setElements(prev =>
+            prev.map((el, i) =>
+              i === index && el.type === 'image'
+                ? {
+                    ...el,
+                    x: locationX - dragOffset.current.x,
+                    y: locationY - dragOffset.current.y,
+                  }
+                : el,
+            ),
+          );
+        } else {
+          pointsRef.current.push({ x: locationX, y: locationY });
+        }
       },
       onPanResponderRelease: () => {
         if (!editable) return;
+        if (selectedImageRef.current !== null) {
+          selectedImageRef.current = null;
+          return;
+        }
         if (pointsRef.current.length && setElements) {
           const path = lineGenerator(pointsRef.current) ?? '';
+          const width = eraser ? 20 : strokeWidthRef.current;
           setElements(prev => [
             ...prev,
-            { type: 'path', d: path, color: strokeColorRef.current },
+            { type: 'path', d: path, color: strokeColorRef.current, width },
           ]);
         }
         pointsRef.current = [];
@@ -68,6 +110,23 @@ export default function DrawingCanvas({
       },
     }),
   ).current;
+
+  useEffect(() => {
+    let frameId: number;
+    const interval = 1000 / 120;
+    let last = 0;
+    const frame = (time: number) => {
+      if (time - last >= interval) {
+        if (pointsRef.current.length) {
+          setCurrentPath(lineGenerator(pointsRef.current) ?? '');
+        }
+        last = time;
+      }
+      frameId = requestAnimationFrame(frame);
+    };
+    frameId = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(frameId);
+  }, [lineGenerator]);
 
   return (
     <View
@@ -97,7 +156,7 @@ export default function DrawingCanvas({
               key={`path-${i}`}
               d={p.d}
               stroke={p.color}
-              strokeWidth={strokeWidth}
+              strokeWidth={p.width ?? strokeWidth}
               fill="none"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -107,7 +166,7 @@ export default function DrawingCanvas({
           <Path
             d={currentPath}
             stroke={strokeColor}
-            strokeWidth={strokeWidth}
+            strokeWidth={eraser ? 20 : strokeWidth}
             fill="none"
             strokeLinecap="round"
             strokeLinejoin="round"

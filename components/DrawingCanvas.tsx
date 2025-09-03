@@ -1,7 +1,7 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, PanResponder, Image } from 'react-native';
-// eslint-disable-next-line import/no-unresolved
 import Svg, { Path } from 'react-native-svg';
+import { line as d3Line, curveBasis } from 'd3-shape';
 
 export type DrawingElement =
   | { type: 'path'; d: string; color: string }
@@ -25,7 +25,19 @@ export default function DrawingCanvas({
   canvasSize = 2000,
 }: DrawingCanvasProps) {
   const [currentPath, setCurrentPath] = useState('');
-  const currentPathRef = useRef('');
+  const pointsRef = useRef<{ x: number; y: number }[]>([]);
+  const strokeColorRef = useRef(strokeColor);
+
+  useEffect(() => {
+    strokeColorRef.current = strokeColor;
+  }, [strokeColor]);
+
+  const lineGenerator = useRef(
+    d3Line<{ x: number; y: number }>()
+      .x(p => p.x)
+      .y(p => p.y)
+      .curve(curveBasis),
+  ).current;
 
   const panResponder = useRef(
     PanResponder.create({
@@ -33,27 +45,26 @@ export default function DrawingCanvas({
       onPanResponderGrant: evt => {
         if (!editable) return;
         const { locationX, locationY } = evt.nativeEvent;
-        const path = `M${locationX} ${locationY}`;
-        currentPathRef.current = path;
-        setCurrentPath(path);
+        pointsRef.current = [{ x: locationX, y: locationY }];
+        setCurrentPath(lineGenerator(pointsRef.current) ?? '');
       },
       onPanResponderMove: evt => {
         if (!editable) return;
         const { locationX, locationY } = evt.nativeEvent;
-        const path = `${currentPathRef.current} L${locationX} ${locationY}`;
-        currentPathRef.current = path;
-        setCurrentPath(path);
+        pointsRef.current.push({ x: locationX, y: locationY });
+        setCurrentPath(lineGenerator(pointsRef.current) ?? '');
       },
       onPanResponderRelease: () => {
         if (!editable) return;
-        if (currentPathRef.current && setElements) {
+        if (pointsRef.current.length && setElements) {
+          const path = lineGenerator(pointsRef.current) ?? '';
           setElements(prev => [
             ...prev,
-            { type: 'path', d: currentPathRef.current, color: strokeColor },
+            { type: 'path', d: path, color: strokeColorRef.current },
           ]);
-          currentPathRef.current = '';
-          setCurrentPath('');
         }
+        pointsRef.current = [];
+        setCurrentPath('');
       },
     }),
   ).current;

@@ -9,7 +9,7 @@ export type DrawingElement =
 
 interface DrawingCanvasProps {
   elements: DrawingElement[];
-  setElements?: (els: DrawingElement[]) => void;
+  setElements?: React.Dispatch<React.SetStateAction<DrawingElement[]>>;
   strokeColor?: string;
   strokeWidth?: number;
   editable?: boolean;
@@ -25,6 +25,7 @@ export default function DrawingCanvas({
   canvasSize = 2000,
 }: DrawingCanvasProps) {
   const [currentPath, setCurrentPath] = useState('');
+  const currentPathRef = useRef('');
 
   const panResponder = useRef(
     PanResponder.create({
@@ -32,20 +33,25 @@ export default function DrawingCanvas({
       onPanResponderGrant: evt => {
         if (!editable) return;
         const { locationX, locationY } = evt.nativeEvent;
-        setCurrentPath(`M${locationX} ${locationY}`);
+        const path = `M${locationX} ${locationY}`;
+        currentPathRef.current = path;
+        setCurrentPath(path);
       },
       onPanResponderMove: evt => {
         if (!editable) return;
         const { locationX, locationY } = evt.nativeEvent;
-        setCurrentPath(prev => `${prev} L${locationX} ${locationY}`);
+        const path = `${currentPathRef.current} L${locationX} ${locationY}`;
+        currentPathRef.current = path;
+        setCurrentPath(path);
       },
       onPanResponderRelease: () => {
         if (!editable) return;
-        if (currentPath && setElements) {
-          setElements([
-            ...elements,
-            { type: 'path', d: currentPath, color: strokeColor },
+        if (currentPathRef.current && setElements) {
+          setElements(prev => [
+            ...prev,
+            { type: 'path', d: currentPathRef.current, color: strokeColor },
           ]);
+          currentPathRef.current = '';
           setCurrentPath('');
         }
       },

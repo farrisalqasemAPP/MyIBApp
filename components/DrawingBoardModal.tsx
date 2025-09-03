@@ -8,7 +8,7 @@ interface Props {
   visible: boolean;
   onClose: () => void;
   elements: DrawingElement[];
-  setElements: (els: DrawingElement[]) => void;
+  setElements: React.Dispatch<React.SetStateAction<DrawingElement[]>>;
 }
 
 export default function DrawingBoardModal({
@@ -27,8 +27,8 @@ export default function DrawingBoardModal({
     });
     if (!result.canceled) {
       const img = result.assets[0];
-      setElements([
-        ...elements,
+      setElements(prev => [
+        ...prev,
         {
           type: 'image',
           uri: img.uri,

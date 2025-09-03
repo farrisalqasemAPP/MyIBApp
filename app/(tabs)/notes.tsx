@@ -37,6 +37,7 @@ type NotesBySubject = {
 export default function NotesScreen() {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme];
+  const [subjects, setSubjects] = useState<SubjectInfo[]>(subjectData);
   const [activeSubject, setActiveSubject] = useState<SubjectInfo | null>(null);
   const [notes, setNotes] = useState<NotesBySubject>({});
   const [editingNote, setEditingNote] = useState<Note | null>(null);
@@ -44,6 +45,9 @@ export default function NotesScreen() {
   const [draftContent, setDraftContent] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [subjectModalVisible, setSubjectModalVisible] = useState(false);
+  const [subjectName, setSubjectName] = useState('');
+  const [editingSubjectInfo, setEditingSubjectInfo] = useState<SubjectInfo | null>(null);
   const [textColor, setTextColor] = useState('#000000');
   const toggleColorScheme = useToggleColorScheme();
   const richText = useRef<RichEditor>(null);
@@ -52,6 +56,47 @@ export default function NotesScreen() {
   const openSubject = (subject: SubjectInfo) => {
     setActiveSubject(subject);
     setSearchQuery('');
+  };
+
+  const openAddSubject = () => {
+    setEditingSubjectInfo(null);
+    setSubjectName('');
+    setSubjectModalVisible(true);
+  };
+
+  const openEditSubject = (subject: SubjectInfo) => {
+    setEditingSubjectInfo(subject);
+    setSubjectName(subject.title);
+    setSubjectModalVisible(true);
+  };
+
+  const saveSubjectInfo = () => {
+    if (subjectName.trim() === '') return;
+    if (editingSubjectInfo) {
+      setSubjects(prev =>
+        prev.map(s => (s.key === editingSubjectInfo.key ? { ...s, title: subjectName } : s))
+      );
+    } else {
+      const newSubject: SubjectInfo = {
+        key: Date.now().toString(),
+        title: subjectName,
+        icon: 'book',
+        color: '#3b2e7e',
+      };
+      setSubjects(prev => [...prev, newSubject]);
+    }
+    setSubjectModalVisible(false);
+  };
+
+  const deleteSubjectInfo = () => {
+    if (!editingSubjectInfo) return;
+    setSubjects(prev => prev.filter(s => s.key !== editingSubjectInfo.key));
+    setNotes(prev => {
+      const updated = { ...prev };
+      delete updated[editingSubjectInfo.key];
+      return updated;
+    });
+    setSubjectModalVisible(false);
   };
 
   const startNewNote = () => {
@@ -159,22 +204,31 @@ export default function NotesScreen() {
           </View>
           {searchQuery === '' ? (
             <ScrollView contentContainerStyle={styles.subjectList}>
-              {subjectData.map(sub => (
+              {subjects.map(sub => (
                 <TouchableOpacity
                   key={sub.key}
                   style={[styles.subjectBox, { backgroundColor: sub.color }]}
                   onPress={() => openSubject(sub)}
+                  onLongPress={() => openEditSubject(sub)}
                 >
                   <Ionicons name={sub.icon} size={32} color="#fff" />
                   <Text style={styles.subjectTitle}>{sub.title}</Text>
                 </TouchableOpacity>
               ))}
+              <TouchableOpacity
+                key="add-subject"
+                style={[styles.subjectBox, { backgroundColor: '#808080' }]}
+                onPress={openAddSubject}
+              >
+                <Ionicons name="add" size={32} color="#fff" />
+                <Text style={styles.subjectTitle}>Add</Text>
+              </TouchableOpacity>
             </ScrollView>
           ) : (
             <ScrollView contentContainerStyle={styles.noteList}>
               {Object.entries(notes)
                 .flatMap(([key, subjectNotes]) => {
-                  const subject = subjectData.find(s => s.key === key);
+                  const subject = subjects.find(s => s.key === key);
                   return subjectNotes.map(n => ({ ...n, subject }));
                 })
                 .filter(n => {
@@ -361,6 +415,50 @@ export default function NotesScreen() {
         </View>
       )}
 
+      <Modal
+        visible={subjectModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSubjectModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          onPress={() => setSubjectModalVisible(false)}
+          activeOpacity={1}
+        >
+          <View style={[styles.settingsContent, { backgroundColor: theme.card }]}>
+            <Text style={[styles.settingsTitle, { color: theme.text }]}>
+              {editingSubjectInfo ? 'Edit Subject' : 'Add Subject'}
+            </Text>
+            <TextInput
+              value={subjectName}
+              onChangeText={setSubjectName}
+              placeholder="Subject Name"
+              placeholderTextColor={theme.text}
+              style={[styles.input, { color: theme.text, borderColor: theme.text }]}
+            />
+            <View style={styles.modalButtonRow}>
+              <TouchableOpacity
+                style={[styles.bottomButton, { backgroundColor: theme.tint }]}
+                onPress={saveSubjectInfo}
+              >
+                <Ionicons name="checkmark" size={24} color="#fff" />
+                <Text style={styles.bottomButtonText}>Save</Text>
+              </TouchableOpacity>
+              {editingSubjectInfo && (
+                <TouchableOpacity
+                  style={[styles.bottomButton, { backgroundColor: 'red' }]}
+                  onPress={deleteSubjectInfo}
+                >
+                  <Ionicons name="trash" size={24} color="#fff" />
+                  <Text style={styles.bottomButtonText}>Delete</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       <AIButton bottomOffset={20} />
 
       {/* Settings Modal */}
@@ -517,6 +615,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-evenly',
     padding: 16,
+    marginBottom: 80,
   },
   bottomButton: {
     flexDirection: 'row',
@@ -557,6 +656,11 @@ const styles = StyleSheet.create({
   },
   settingPlaceholder: {
     fontSize: 14,
+  },
+  modalButtonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
+    marginTop: 8,
   },
 });
 

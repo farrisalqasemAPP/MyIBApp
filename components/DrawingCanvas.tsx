@@ -4,7 +4,13 @@ import Svg, { Path } from 'react-native-svg';
 import { line as d3Line, curveBasis } from 'd3-shape';
 
 export type DrawingElement =
-  | { type: 'path'; d: string; color: string; width?: number }
+  | {
+      type: 'path';
+      d: string;
+      color: string;
+      width?: number;
+      points?: { x: number; y: number }[];
+    }
   | { type: 'image'; uri: string; x: number; y: number; width: number; height: number };
 
 interface DrawingCanvasProps {
@@ -14,6 +20,7 @@ interface DrawingCanvasProps {
   strokeWidth?: number;
   editable?: boolean;
   canvasSize?: number;
+  eraser?: boolean;
 }
 
 export default function DrawingCanvas({
@@ -23,6 +30,7 @@ export default function DrawingCanvas({
   strokeWidth = 4,
   editable = true,
   canvasSize = 2000,
+  eraser = false,
 }: DrawingCanvasProps) {
   const [currentPath, setCurrentPath] = useState('');
   const pointsRef = useRef<{ x: number; y: number }[]>([]);
@@ -46,12 +54,35 @@ export default function DrawingCanvas({
       .curve(curveBasis),
   ).current;
 
+  const eraseAtPoint = (x: number, y: number) => {
+    if (!setElements) return;
+    setElements(prev => {
+      const index = prev.findIndex(
+        el =>
+          el.type === 'path' &&
+          el.points?.some(p =>
+            Math.hypot(p.x - x, p.y - y) <= (el.width ?? strokeWidthRef.current) + 5,
+          ),
+      );
+      if (index !== -1) {
+        const updated = [...prev];
+        updated.splice(index, 1);
+        return updated;
+      }
+      return prev;
+    });
+  };
+
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => editable,
       onPanResponderGrant: evt => {
         if (!editable) return;
         const { locationX, locationY } = evt.nativeEvent;
+        if (eraser) {
+          eraseAtPoint(locationX, locationY);
+          return;
+        }
         const imgIndex = elements.findIndex(
           e =>
             e.type === 'image' &&
@@ -72,6 +103,10 @@ export default function DrawingCanvas({
       onPanResponderMove: evt => {
         if (!editable) return;
         const { locationX, locationY } = evt.nativeEvent;
+        if (eraser) {
+          eraseAtPoint(locationX, locationY);
+          return;
+        }
         if (selectedImageRef.current !== null && setElements) {
           const index = selectedImageRef.current;
           setElements(prev =>
@@ -92,6 +127,7 @@ export default function DrawingCanvas({
       },
       onPanResponderRelease: () => {
         if (!editable) return;
+        if (eraser) return;
         if (selectedImageRef.current !== null) {
           selectedImageRef.current = null;
           return;
@@ -101,7 +137,13 @@ export default function DrawingCanvas({
           const width = strokeWidthRef.current;
           setElements(prev => [
             ...prev,
-            { type: 'path', d: path, color: strokeColorRef.current, width },
+            {
+              type: 'path',
+              d: path,
+              color: strokeColorRef.current,
+              width,
+              points: [...pointsRef.current],
+            },
           ]);
         }
         pointsRef.current = [];

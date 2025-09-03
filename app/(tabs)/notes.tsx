@@ -16,6 +16,7 @@ import {
   RichToolbar,
   actions,
 } from 'react-native-pell-rich-editor';
+import DrawingCanvas from '@/components/DrawingCanvas';
 
 import AIButton from '@/components/AIButton';
 import { Colors } from '@/constants/Colors';
@@ -26,8 +27,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 type Note = {
   id: string;
   title: string;
-  content: string; // stored as HTML
+  content: string; // stored as HTML for text notes
+  drawing?: string[]; // path data for drawing notes
   pinned: boolean;
+  type: 'text' | 'drawing';
 };
 
 type NotesBySubject = {
@@ -43,6 +46,7 @@ export default function NotesScreen() {
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [draftTitle, setDraftTitle] = useState('');
   const [draftContent, setDraftContent] = useState('');
+  const [drawingPaths, setDrawingPaths] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [subjectModalVisible, setSubjectModalVisible] = useState(false);
@@ -115,28 +119,50 @@ export default function NotesScreen() {
   };
 
   const startNewNote = () => {
-    setEditingNote({ id: Date.now().toString(), title: '', content: '', pinned: false });
+    setEditingNote({
+      id: Date.now().toString(),
+      title: '',
+      content: '',
+      pinned: false,
+      type: 'text',
+    });
     setDraftTitle('');
     setDraftContent('');
     setTextColor('#000000');
     richText.current?.setForeColor('#000000');
   };
 
+  const startNewDrawing = () => {
+    setEditingNote({
+      id: Date.now().toString(),
+      title: '',
+      content: '',
+      drawing: [],
+      pinned: false,
+      type: 'drawing',
+    });
+    setDraftTitle('');
+    setDrawingPaths([]);
+  };
+
   const editNote = (note: Note) => {
     setEditingNote(note);
     setDraftTitle(note.title);
-    setDraftContent(note.content);
-    setTextColor('#000000');
-    richText.current?.setForeColor('#000000');
+    if (note.type === 'drawing') {
+      setDrawingPaths(note.drawing || []);
+    } else {
+      setDraftContent(note.content);
+      setTextColor('#000000');
+      richText.current?.setForeColor('#000000');
+    }
   };
 
   const saveNote = () => {
     if (!activeSubject || !editingNote) return;
-    const note = {
-      ...editingNote,
-      title: draftTitle,
-      content: draftContent,
-    };
+    const note =
+      editingNote.type === 'drawing'
+        ? { ...editingNote, title: draftTitle, drawing: drawingPaths }
+        : { ...editingNote, title: draftTitle, content: draftContent };
     setNotes(prev => {
       const subjectNotes = prev[activeSubject.key] || [];
       const index = subjectNotes.findIndex(n => n.id === note.id);
@@ -150,12 +176,14 @@ export default function NotesScreen() {
     setEditingNote(null);
     setDraftTitle('');
     setDraftContent('');
+    setDrawingPaths([]);
   };
 
   const cancelEdit = () => {
     setEditingNote(null);
     setDraftTitle('');
     setDraftContent('');
+    setDrawingPaths([]);
     setTextColor('#000000');
   };
 
@@ -297,7 +325,8 @@ export default function NotesScreen() {
                   const q = searchQuery.toLowerCase();
                   return (
                     n.title.toLowerCase().includes(q) ||
-                    stripHtml(n.content).toLowerCase().includes(q)
+                    (n.type === 'text' &&
+                      stripHtml(n.content).toLowerCase().includes(q))
                   );
                 })
                 .map(n => (
@@ -317,7 +346,7 @@ export default function NotesScreen() {
                         numberOfLines={1}
                         style={[styles.notePreview, { color: theme.text }]}
                       >
-                        {stripHtml(n.content)}
+                        {n.type === 'drawing' ? 'Drawing' : stripHtml(n.content)}
                       </Text>
                       <Text
                         style={{ color: theme.text, fontSize: 12, marginTop: 4 }}
@@ -367,7 +396,8 @@ export default function NotesScreen() {
                 const q = searchQuery.toLowerCase();
                 return (
                   n.title.toLowerCase().includes(q) ||
-                  stripHtml(n.content).toLowerCase().includes(q)
+                  (n.type === 'text' &&
+                    stripHtml(n.content).toLowerCase().includes(q))
                 );
               })
               .sort((a, b) => Number(b.pinned) - Number(a.pinned))
@@ -388,23 +418,38 @@ export default function NotesScreen() {
                       {n.title || 'Untitled Note'}
                     </Text>
                     <Text numberOfLines={1} style={[styles.notePreview, { color: theme.text }]}> 
-                      {stripHtml(n.content)}
+                      {n.type === 'drawing' ? 'Drawing' : stripHtml(n.content)}
                     </Text>
                   </TouchableOpacity>
                 </View>
               ))}
-            <TouchableOpacity
-              style={[styles.addNoteButton, { backgroundColor: activeSubject.color }]}
-              onPress={startNewNote}
-            >
-              <Ionicons name="add" size={24} color="#fff" />
-              <Text style={styles.addNoteText}>New Note</Text>
-            </TouchableOpacity>
+            <View style={styles.addNoteRow}>
+              <TouchableOpacity
+                style={[
+                  styles.addNoteButton,
+                  { backgroundColor: activeSubject.color, marginRight: 4 },
+                ]}
+                onPress={startNewNote}
+              >
+                <Ionicons name="pencil" size={24} color="#fff" />
+                <Text style={styles.addNoteText}>Text</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.addNoteButton,
+                  { backgroundColor: activeSubject.color, marginLeft: 4 },
+                ]}
+                onPress={startNewDrawing}
+              >
+                <Ionicons name="brush" size={24} color="#fff" />
+                <Text style={styles.addNoteText}>Drawing</Text>
+              </TouchableOpacity>
+            </View>
           </ScrollView>
         </View>
       )}
 
-      {activeSubject && editingNote && (
+      {activeSubject && editingNote && editingNote.type === 'text' && (
         <View style={{ flex: 1 }}>
           <View style={[styles.subjectHeader, { backgroundColor: activeSubject.color }]}>
             <TouchableOpacity onPress={cancelEdit}>
@@ -454,6 +499,51 @@ export default function NotesScreen() {
                   }}
                 />
               ))}
+            </View>
+          </ScrollView>
+          <View style={styles.bottomButtons}>
+            <TouchableOpacity
+              style={[styles.bottomButton, { backgroundColor: activeSubject.color }]}
+              onPress={saveNote}
+            >
+              <Ionicons name="checkmark" size={24} color="#fff" />
+              <Text style={styles.bottomButtonText}>Save</Text>
+            </TouchableOpacity>
+            {notes[activeSubject.key]?.some(n => n.id === editingNote.id) && (
+              <TouchableOpacity
+                style={[styles.bottomButton, { backgroundColor: 'red' }]}
+                onPress={() => deleteNote(editingNote.id)}
+              >
+                <Ionicons name="trash" size={24} color="#fff" />
+                <Text style={styles.bottomButtonText}>Delete</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      )}
+
+      {activeSubject && editingNote && editingNote.type === 'drawing' && (
+        <View style={{ flex: 1 }}>
+          <View style={[styles.subjectHeader, { backgroundColor: activeSubject.color }]}>
+            <TouchableOpacity onPress={cancelEdit}>
+              <Ionicons name="close" size={24} color="#fff" />
+            </TouchableOpacity>
+            <Text style={styles.subjectHeaderTitle}>
+              {editingNote.title ? 'Edit Drawing' : 'New Drawing'}
+            </Text>
+            <View style={{ width: 24 }} />
+          </View>
+          <ScrollView contentContainerStyle={styles.editorContent}>
+            <TextInput
+              value={draftTitle}
+              onChangeText={setDraftTitle}
+              placeholder="Title"
+              placeholderTextColor={theme.text}
+              style={[styles.input, { color: theme.text, borderColor: activeSubject.color }]}
+            />
+            <View style={[styles.drawingWrapper, { borderColor: activeSubject.color }]}
+            >
+              <DrawingCanvas paths={drawingPaths} setPaths={setDrawingPaths} />
             </View>
           </ScrollView>
           <View style={styles.bottomButtons}>
@@ -702,13 +792,17 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   notePreview: {},
+  addNoteRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
   addNoteButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 12,
     borderRadius: 8,
-    marginTop: 8,
   },
   addNoteText: {
     color: '#fff',
@@ -733,6 +827,13 @@ const styles = StyleSheet.create({
   richToolbar: {
     borderWidth: 1,
     borderRadius: 8,
+    marginBottom: 12,
+  },
+  drawingWrapper: {
+    borderWidth: 1,
+    borderRadius: 8,
+    height: 300,
+    overflow: 'hidden',
     marginBottom: 12,
   },
   colorOptions: {

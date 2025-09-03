@@ -39,33 +39,27 @@ const cardData = [
 const overviewSections = [
   {
     title: 'Subject Home',
-    description:
-      "Snapshot of this week's unit, key resources, upcoming deadlines, quick links.",
+    icon: 'home-outline' as const,
   },
   {
     title: 'Syllabus & Units',
-    description:
-      'Unit map with aims, assessment objectives (HL/SL), command terms.',
+    icon: 'list-outline' as const,
   },
   {
     title: 'Library & Lessons',
-    description:
-      'Curated resources for the subject: PDFs, slides, videos, open-library books; filter by unit/level/language.',
+    icon: 'library-outline' as const,
   },
   {
     title: 'Assignments & Submissions',
-    description:
-      'Briefs, rubrics, submit files, status (assigned/submitted/graded).',
+    icon: 'document-text-outline' as const,
   },
   {
     title: 'Practice & Question Bank',
-    description:
-      'Past-style questions, auto-generated drills, step-by-step solutions, difficulty filters.',
+    icon: 'help-circle-outline' as const,
   },
   {
     title: 'Results & Feedback',
-    description:
-      'Grades by unit/AO, teacher comments, targets, progress analytics.',
+    icon: 'stats-chart-outline' as const,
   },
 ];
 
@@ -167,8 +161,8 @@ export default function HomeScreen() {
               key={section.title}
               style={[styles.box, { backgroundColor: selectedSubject.color }]}
             >
+              <Ionicons name={section.icon} size={32} color="#fff" />
               <Text style={styles.boxTitle}>{section.title}</Text>
-              <Text style={styles.boxNote}>{section.description}</Text>
             </View>
           ))}
         </View>
@@ -356,12 +350,6 @@ const createStyles = (
       color: '#fff',
       fontSize: 16,
       fontWeight: 'bold',
-      textAlign: 'center',
-    },
-    boxNote: {
-      marginTop: 8,
-      color: '#ddd',
-      fontSize: 14,
       textAlign: 'center',
     },
     modalOverlay: {

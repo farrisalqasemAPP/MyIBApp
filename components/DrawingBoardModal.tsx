@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Modal, View, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { ColorPicker, fromHsv } from 'react-native-color-picker';
 import DrawingCanvas, { DrawingElement } from './DrawingCanvas';
 
 interface Props {
@@ -62,13 +63,12 @@ export default function DrawingBoardModal({
           </ScrollView>
         </ScrollView>
         <View style={styles.toolbar}>
-          {['#000000', '#ff0000', '#00ff00', '#0000ff'].map(c => (
-            <TouchableOpacity
-              key={c}
-              style={[styles.colorDot, { backgroundColor: c }, color === c && styles.selected]}
-              onPress={() => setColor(c)}
-            />
-          ))}
+          <ColorPicker
+            color={color}
+            onColorChange={c => setColor(fromHsv(c))}
+            hideSliders
+            style={styles.colorPicker}
+          />
           <TouchableOpacity onPress={pickImage}>
             <Ionicons name="image" size={24} color="#fff" />
           </TouchableOpacity>
@@ -93,15 +93,8 @@ const styles = StyleSheet.create({
     padding: 10,
     backgroundColor: 'rgba(0,0,0,0.6)',
   },
-  colorDot: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    marginHorizontal: 5,
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  selected: {
-    borderColor: '#fff',
+  colorPicker: {
+    width: 150,
+    height: 150,
   },
 });

@@ -16,7 +16,8 @@ import {
   RichToolbar,
   actions,
 } from 'react-native-pell-rich-editor';
-import DrawingCanvas from '@/components/DrawingCanvas';
+import DrawingCanvas, { DrawingElement } from '@/components/DrawingCanvas';
+import DrawingBoardModal from '@/components/DrawingBoardModal';
 
 import AIButton from '@/components/AIButton';
 import { Colors } from '@/constants/Colors';
@@ -28,7 +29,7 @@ type Note = {
   id: string;
   title: string;
   content: string; // stored as HTML for text notes
-  drawing?: string[]; // path data for drawing notes
+  drawing?: DrawingElement[]; // drawing elements for drawing notes
   pinned: boolean;
   type: 'text' | 'drawing';
 };
@@ -46,7 +47,8 @@ export default function NotesScreen() {
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [draftTitle, setDraftTitle] = useState('');
   const [draftContent, setDraftContent] = useState('');
-  const [drawingPaths, setDrawingPaths] = useState<string[]>([]);
+  const [drawingElements, setDrawingElements] = useState<DrawingElement[]>([]);
+  const [drawingModalVisible, setDrawingModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [subjectModalVisible, setSubjectModalVisible] = useState(false);
@@ -142,14 +144,16 @@ export default function NotesScreen() {
       type: 'drawing',
     });
     setDraftTitle('');
-    setDrawingPaths([]);
+    setDrawingElements([]);
+    setDrawingModalVisible(true);
   };
 
   const editNote = (note: Note) => {
     setEditingNote(note);
     setDraftTitle(note.title);
     if (note.type === 'drawing') {
-      setDrawingPaths(note.drawing || []);
+      setDrawingElements(note.drawing || []);
+      setDrawingModalVisible(true);
     } else {
       setDraftContent(note.content);
       setTextColor('#000000');
@@ -161,7 +165,7 @@ export default function NotesScreen() {
     if (!activeSubject || !editingNote) return;
     const note =
       editingNote.type === 'drawing'
-        ? { ...editingNote, title: draftTitle, drawing: drawingPaths }
+        ? { ...editingNote, title: draftTitle, drawing: drawingElements }
         : { ...editingNote, title: draftTitle, content: draftContent };
     setNotes(prev => {
       const subjectNotes = prev[activeSubject.key] || [];
@@ -176,15 +180,17 @@ export default function NotesScreen() {
     setEditingNote(null);
     setDraftTitle('');
     setDraftContent('');
-    setDrawingPaths([]);
+    setDrawingElements([]);
+    setDrawingModalVisible(false);
   };
 
   const cancelEdit = () => {
     setEditingNote(null);
     setDraftTitle('');
     setDraftContent('');
-    setDrawingPaths([]);
+    setDrawingElements([]);
     setTextColor('#000000');
+    setDrawingModalVisible(false);
   };
 
   const deleteNote = (id: string) => {
@@ -541,11 +547,24 @@ export default function NotesScreen() {
               placeholderTextColor={theme.text}
               style={[styles.input, { color: theme.text, borderColor: activeSubject.color }]}
             />
-            <View style={[styles.drawingWrapper, { borderColor: activeSubject.color }]}
+            <TouchableOpacity
+              style={[styles.drawingWrapper, { borderColor: activeSubject.color }]}
+              onPress={() => setDrawingModalVisible(true)}
+              activeOpacity={0.8}
             >
-              <DrawingCanvas paths={drawingPaths} setPaths={setDrawingPaths} />
-            </View>
+              <DrawingCanvas
+                elements={drawingElements}
+                editable={false}
+                canvasSize={300}
+              />
+            </TouchableOpacity>
           </ScrollView>
+          <DrawingBoardModal
+            visible={drawingModalVisible}
+            onClose={() => setDrawingModalVisible(false)}
+            elements={drawingElements}
+            setElements={setDrawingElements}
+          />
           <View style={styles.bottomButtons}>
             <TouchableOpacity
               style={[styles.bottomButton, { backgroundColor: activeSubject.color }]}

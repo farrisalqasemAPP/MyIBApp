@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, PanResponder, Image, Text, Alert } from 'react-native';
+import { View, PanResponder, Image, Text, TextInput } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { line as d3Line, curveBasis } from 'd3-shape';
 
@@ -12,7 +12,16 @@ export type DrawingElement =
       points?: { x: number; y: number }[];
     }
   | { type: 'image'; uri: string; x: number; y: number; width: number; height: number }
-  | { type: 'text'; text: string; x: number; y: number; color: string; fontSize?: number };
+  | {
+      type: 'text';
+      text: string;
+      x: number;
+      y: number;
+      color: string;
+      fontSize?: number;
+      width?: number;
+      height?: number;
+    };
 
 interface DrawingCanvasProps {
   elements: DrawingElement[];
@@ -41,8 +50,10 @@ export default function DrawingCanvas({
   const strokeWidthRef = useRef(strokeWidth);
   const eraserRef = useRef(eraser);
   const selectedImageRef = useRef<number | null>(null);
+  const selectedTextRef = useRef<number | null>(null);
   const dragOffset = useRef({ x: 0, y: 0 });
   const textModeRef = useRef(textMode);
+  const [editingTextIndex, setEditingTextIndex] = useState<number | null>(null);
 
   useEffect(() => {
     strokeColorRef.current = strokeColor;
@@ -94,25 +105,37 @@ export default function DrawingCanvas({
         const { locationX, locationY } = evt.nativeEvent;
         if (textModeRef.current) {
           if (setElements) {
-            Alert.prompt('Add Text', 'Enter text', input => {
-              if (input) {
-                setElements(prev => [
-                  ...prev,
-                  {
-                    type: 'text',
-                    text: input,
-                    x: locationX,
-                    y: locationY,
-                    color: strokeColorRef.current,
-                  },
-                ]);
-              }
-            });
+            const newIndex = elements.length;
+            setElements(prev => [
+              ...prev,
+              {
+                type: 'text',
+                text: '',
+                x: locationX,
+                y: locationY,
+                color: strokeColorRef.current,
+              },
+            ]);
+            setEditingTextIndex(newIndex);
           }
           return;
         }
         if (eraserRef.current) {
           eraseAtPoint(locationX, locationY);
+          return;
+        }
+        const textIndex = elements.findIndex(
+          e =>
+            e.type === 'text' &&
+            locationX >= e.x &&
+            locationX <= e.x + (e.width ?? 100) &&
+            locationY >= e.y &&
+            locationY <= e.y + (e.height ?? 30),
+        );
+        if (textIndex !== -1) {
+          selectedTextRef.current = textIndex;
+          const txt = elements[textIndex] as Extract<DrawingElement, { type: 'text' }>;
+          dragOffset.current = { x: locationX - txt.x, y: locationY - txt.y };
           return;
         }
         const imgIndex = elements.findIndex(
@@ -140,7 +163,20 @@ export default function DrawingCanvas({
           eraseAtPoint(locationX, locationY);
           return;
         }
-        if (selectedImageRef.current !== null && setElements) {
+        if (selectedTextRef.current !== null && setElements) {
+          const index = selectedTextRef.current;
+          setElements(prev =>
+            prev.map((el, i) =>
+              i === index && el.type === 'text'
+                ? {
+                    ...el,
+                    x: locationX - dragOffset.current.x,
+                    y: locationY - dragOffset.current.y,
+                  }
+                : el,
+            ),
+          );
+        } else if (selectedImageRef.current !== null && setElements) {
           const index = selectedImageRef.current;
           setElements(prev =>
             prev.map((el, i) =>
@@ -161,6 +197,10 @@ export default function DrawingCanvas({
       onPanResponderRelease: () => {
         if (!editable) return;
         if (textModeRef.current || eraserRef.current) return;
+        if (selectedTextRef.current !== null) {
+          selectedTextRef.current = null;
+          return;
+        }
         if (selectedImageRef.current !== null) {
           selectedImageRef.current = null;
           return;
@@ -208,18 +248,70 @@ export default function DrawingCanvas({
       {elements
         .filter(e => e.type === 'text')
         .map((t, i) => (
-          <Text
-            key={`text-${i}`}
-            style={{
-              position: 'absolute',
-              left: t.x,
-              top: t.y,
-              color: t.color,
-              fontSize: t.fontSize ?? 16,
-            }}
-          >
-            {t.text}
-          </Text>
+          editingTextIndex === i ? (
+            <TextInput
+              key={`text-${i}`}
+              value={t.text}
+              onChangeText={text => {
+                if (setElements) {
+                  setElements(prev =>
+                    prev.map((el, idx) =>
+                      idx === i && el.type === 'text' ? { ...el, text } : el,
+                    ),
+                  );
+                }
+              }}
+              style={{
+                position: 'absolute',
+                left: t.x,
+                top: t.y,
+                color: t.color,
+                fontSize: t.fontSize ?? 16,
+                minWidth: 100,
+              }}
+              multiline
+              autoFocus
+              onBlur={() => setEditingTextIndex(null)}
+              onLayout={e => {
+                const { width, height } = e.nativeEvent.layout;
+                if (setElements) {
+                  setElements(prev =>
+                    prev.map((el, idx) =>
+                      idx === i && el.type === 'text'
+                        ? { ...el, width, height }
+                        : el,
+                    ),
+                  );
+                }
+              }}
+            />
+          ) : (
+            <Text
+              key={`text-${i}`}
+              style={{
+                position: 'absolute',
+                left: t.x,
+                top: t.y,
+                color: t.color,
+                fontSize: t.fontSize ?? 16,
+              }}
+              onPress={() => setEditingTextIndex(i)}
+              onLayout={e => {
+                const { width, height } = e.nativeEvent.layout;
+                if (setElements) {
+                  setElements(prev =>
+                    prev.map((el, idx) =>
+                      idx === i && el.type === 'text'
+                        ? { ...el, width, height }
+                        : el,
+                    ),
+                  );
+                }
+              }}
+            >
+              {t.text}
+            </Text>
+          )
         ))}
       <Svg style={{ position: 'absolute', width: canvasSize, height: canvasSize }}>
         {elements

@@ -32,6 +32,7 @@ interface DrawingCanvasProps {
   canvasSize?: number;
   eraser?: boolean;
   textMode?: boolean;
+  editMode?: boolean;
 }
 
 export default function DrawingCanvas({
@@ -43,6 +44,7 @@ export default function DrawingCanvas({
   canvasSize = 2000,
   eraser = false,
   textMode = false,
+  editMode = false,
 }: DrawingCanvasProps) {
   const [currentPath, setCurrentPath] = useState('');
   const pointsRef = useRef<{ x: number; y: number }[]>([]);
@@ -53,7 +55,10 @@ export default function DrawingCanvas({
   const selectedTextRef = useRef<number | null>(null);
   const dragOffset = useRef({ x: 0, y: 0 });
   const textModeRef = useRef(textMode);
+  const editModeRef = useRef(editMode);
   const [editingTextIndex, setEditingTextIndex] = useState<number | null>(null);
+  const editingTextIndexRef = useRef<number | null>(null);
+  const hasMovedRef = useRef(false);
 
   useEffect(() => {
     strokeColorRef.current = strokeColor;
@@ -70,6 +75,14 @@ export default function DrawingCanvas({
   useEffect(() => {
     textModeRef.current = textMode;
   }, [textMode]);
+
+  useEffect(() => {
+    editModeRef.current = editMode;
+  }, [editMode]);
+
+  useEffect(() => {
+    editingTextIndexRef.current = editingTextIndex;
+  }, [editingTextIndex]);
 
   const lineGenerator = useRef(
     d3Line<{ x: number; y: number }>()
@@ -99,10 +112,42 @@ export default function DrawingCanvas({
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => editable,
+      onStartShouldSetPanResponder: () => editable && editingTextIndexRef.current === null,
       onPanResponderGrant: evt => {
         if (!editable) return;
         const { locationX, locationY } = evt.nativeEvent;
+        hasMovedRef.current = false;
+        if (editModeRef.current) {
+          const textIndex = elements.findIndex(
+            e =>
+              e.type === 'text' &&
+              locationX >= e.x &&
+              locationX <= e.x + (e.width ?? 100) &&
+              locationY >= e.y &&
+              locationY <= e.y + (e.height ?? 30),
+          );
+          if (textIndex !== -1) {
+            selectedTextRef.current = textIndex;
+            const txt = elements[textIndex] as Extract<DrawingElement, { type: 'text' }>;
+            dragOffset.current = { x: locationX - txt.x, y: locationY - txt.y };
+            return;
+          }
+          const imgIndex = elements.findIndex(
+            e =>
+              e.type === 'image' &&
+              locationX >= e.x &&
+              locationX <= e.x + e.width &&
+              locationY >= e.y &&
+              locationY <= e.y + e.height,
+          );
+          if (imgIndex !== -1) {
+            selectedImageRef.current = imgIndex;
+            const img = elements[imgIndex] as Extract<DrawingElement, { type: 'image' }>;
+            dragOffset.current = { x: locationX - img.x, y: locationY - img.y };
+            return;
+          }
+          return;
+        }
         if (textModeRef.current) {
           if (setElements) {
             const newIndex = elements.length;
@@ -158,6 +203,38 @@ export default function DrawingCanvas({
       onPanResponderMove: evt => {
         if (!editable) return;
         const { locationX, locationY } = evt.nativeEvent;
+        if (editModeRef.current) {
+          if (selectedTextRef.current !== null && setElements) {
+            const index = selectedTextRef.current;
+            setElements(prev =>
+              prev.map((el, i) =>
+                i === index && el.type === 'text'
+                  ? {
+                      ...el,
+                      x: locationX - dragOffset.current.x,
+                      y: locationY - dragOffset.current.y,
+                    }
+                  : el,
+              ),
+            );
+            hasMovedRef.current = true;
+          } else if (selectedImageRef.current !== null && setElements) {
+            const index = selectedImageRef.current;
+            setElements(prev =>
+              prev.map((el, i) =>
+                i === index && el.type === 'image'
+                  ? {
+                      ...el,
+                      x: locationX - dragOffset.current.x,
+                      y: locationY - dragOffset.current.y,
+                    }
+                  : el,
+              ),
+            );
+            hasMovedRef.current = true;
+          }
+          return;
+        }
         if (textModeRef.current) return;
         if (eraserRef.current) {
           eraseAtPoint(locationX, locationY);
@@ -176,6 +253,7 @@ export default function DrawingCanvas({
                 : el,
             ),
           );
+          hasMovedRef.current = true;
         } else if (selectedImageRef.current !== null && setElements) {
           const index = selectedImageRef.current;
           setElements(prev =>
@@ -189,13 +267,23 @@ export default function DrawingCanvas({
                 : el,
             ),
           );
+          hasMovedRef.current = true;
         } else {
           pointsRef.current.push({ x: locationX, y: locationY });
           setCurrentPath(lineGenerator(pointsRef.current) ?? '');
+          hasMovedRef.current = true;
         }
       },
       onPanResponderRelease: () => {
         if (!editable) return;
+        if (editModeRef.current) {
+          if (selectedTextRef.current !== null && !hasMovedRef.current) {
+            setEditingTextIndex(selectedTextRef.current);
+          }
+          selectedTextRef.current = null;
+          selectedImageRef.current = null;
+          return;
+        }
         if (textModeRef.current || eraserRef.current) return;
         if (selectedTextRef.current !== null) {
           selectedTextRef.current = null;

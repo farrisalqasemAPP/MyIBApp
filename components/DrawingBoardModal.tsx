@@ -1,5 +1,12 @@
 import React, { useState } from 'react';
-import { Modal, View, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import {
+  Modal,
+  View,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+} from 'react-native';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import DrawingCanvas, { DrawingElement } from './DrawingCanvas';
@@ -44,6 +51,12 @@ export default function DrawingBoardModal({
     });
     if (!result.canceled) {
       const img = result.assets[0];
+      const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+      const maxWidth = screenWidth - 40;
+      const maxHeight = screenHeight - 200;
+      const imgWidth = img.width ?? 200;
+      const imgHeight = img.height ?? 200;
+      const scale = Math.min(maxWidth / imgWidth, maxHeight / imgHeight, 1);
       setElements(prev => [
         ...prev,
         {
@@ -51,8 +64,8 @@ export default function DrawingBoardModal({
           uri: img.uri,
           x: 100,
           y: 100,
-          width: img.width ?? 200,
-          height: img.height ?? 200,
+          width: imgWidth * scale,
+          height: imgHeight * scale,
         },
       ]);
     }
@@ -99,13 +112,6 @@ export default function DrawingBoardModal({
           <TouchableOpacity onPress={() => setShowColors(s => !s)}>
             <Ionicons name="color-palette" size={24} color={darkMode ? '#fff' : '#000'} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setShowSizes(s => !s)}>
-            <Ionicons
-              name={showSizes ? 'chevron-down' : 'chevron-up'}
-              size={24}
-              color={darkMode ? '#fff' : '#000'}
-            />
-          </TouchableOpacity>
           <TouchableOpacity onPress={() => setTextMode(t => !t)}>
             <Ionicons
               name="text"
@@ -127,6 +133,16 @@ export default function DrawingBoardModal({
             <Ionicons name="checkmark" size={24} color={darkMode ? '#fff' : '#000'} />
           </TouchableOpacity>
         </View>
+        <TouchableOpacity
+          style={styles.sizeToggle}
+          onPress={() => setShowSizes(s => !s)}
+        >
+          <Ionicons
+            name={showSizes ? 'chevron-down' : 'chevron-up'}
+            size={24}
+            color={darkMode ? '#fff' : '#000'}
+          />
+        </TouchableOpacity>
         {showColors && (
           <View style={styles.colorPalette}>
             {COLORS.map(c => (
@@ -155,17 +171,24 @@ export default function DrawingBoardModal({
                 style={[
                   styles.sizeSwatch,
                   {
-                    width: s,
-                    height: s,
-                    borderRadius: s / 2,
                     borderColor: s === strokeWidth ? '#fff' : 'transparent',
+                    backgroundColor: darkMode ? '#000' : '#fff',
                   },
                 ]}
                 onPress={() => {
                   setStrokeWidth(s);
                   setShowSizes(false);
                 }}
-              />
+              >
+                <View
+                  style={{
+                    width: s,
+                    height: s,
+                    borderRadius: s / 2,
+                    backgroundColor: darkMode ? '#fff' : '#000',
+                  }}
+                />
+              </TouchableOpacity>
             ))}
           </View>
         )}
@@ -193,7 +216,7 @@ const styles = StyleSheet.create({
   },
   sizePalette: {
     position: 'absolute',
-    bottom: 60,
+    bottom: 160,
     right: 10,
     flexDirection: 'column',
     alignItems: 'center',
@@ -201,7 +224,11 @@ const styles = StyleSheet.create({
   sizeSwatch: {
     marginVertical: 4,
     borderWidth: 2,
-    backgroundColor: '#fff',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   colorSwatch: {
     width: 30,
@@ -215,5 +242,10 @@ const styles = StyleSheet.create({
     top: 40,
     right: 10,
     zIndex: 10,
+  },
+  sizeToggle: {
+    position: 'absolute',
+    right: 10,
+    bottom: 120,
   },
 });

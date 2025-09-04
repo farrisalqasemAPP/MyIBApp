@@ -31,6 +31,8 @@ export default function DrawingBoardModal({
   const [showColors, setShowColors] = useState(false);
   const [showSizes, setShowSizes] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [scale, setScale] = useState(1);
   const COLORS = [
     '#000000',
     '#ff0000',
@@ -86,21 +88,26 @@ export default function DrawingBoardModal({
         <ScrollView
           horizontal
           bounces={false}
-          contentContainerStyle={{ width: canvasSize }}
+          contentContainerStyle={{ width: canvasSize * scale }}
         >
           <ScrollView
             bounces={false}
-            contentContainerStyle={{ height: canvasSize }}
+            contentContainerStyle={{ height: canvasSize * scale }}
           >
-            <DrawingCanvas
-              elements={elements}
-              setElements={setElements}
-              strokeColor={color}
-              strokeWidth={strokeWidth}
-              canvasSize={canvasSize}
-              eraser={eraser}
-              textMode={textMode}
-            />
+            <View
+              style={{ width: canvasSize, height: canvasSize, transform: [{ scale }] }}
+            >
+              <DrawingCanvas
+                elements={elements}
+                setElements={setElements}
+                strokeColor={color}
+                strokeWidth={strokeWidth}
+                canvasSize={canvasSize}
+                eraser={eraser}
+                textMode={textMode}
+                editMode={editMode}
+              />
+            </View>
           </ScrollView>
         </ScrollView>
         <View
@@ -119,6 +126,13 @@ export default function DrawingBoardModal({
               color={textMode ? '#ffd700' : darkMode ? '#fff' : '#000'}
             />
           </TouchableOpacity>
+          <TouchableOpacity onPress={() => setEditMode(e => !e)}>
+            <Ionicons
+              name="hand-left"
+              size={24}
+              color={editMode ? '#ffd700' : darkMode ? '#fff' : '#000'}
+            />
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => setEraser(e => !e)}>
             {eraser ? (
               <Ionicons name="pencil" size={24} color={darkMode ? '#fff' : '#000'} />
@@ -128,6 +142,12 @@ export default function DrawingBoardModal({
           </TouchableOpacity>
           <TouchableOpacity onPress={pickImage}>
             <Ionicons name="image" size={24} color={darkMode ? '#fff' : '#000'} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setScale(s => Math.min(s + 0.2, 3))}>
+            <Ionicons name="add" size={24} color={darkMode ? '#fff' : '#000'} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setScale(s => Math.max(s - 0.2, 0.5))}>
+            <Ionicons name="remove" size={24} color={darkMode ? '#fff' : '#000'} />
           </TouchableOpacity>
           <TouchableOpacity onPress={onClose}>
             <Ionicons name="checkmark" size={24} color={darkMode ? '#fff' : '#000'} />

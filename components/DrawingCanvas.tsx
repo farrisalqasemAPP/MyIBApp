@@ -318,6 +318,34 @@ export default function DrawingCanvas({
       style={{ width: canvasSize, height: canvasSize }}
       {...panResponder.panHandlers}
     >
+      <Svg
+        pointerEvents="none"
+        style={{ position: 'absolute', width: canvasSize, height: canvasSize }}
+      >
+        {elements
+          .filter(e => e.type === 'path')
+          .map((p, i) => (
+            <Path
+              key={`path-${i}`}
+              d={p.d}
+              stroke={p.color}
+              strokeWidth={p.width ?? strokeWidth}
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          ))}
+        {currentPath ? (
+          <Path
+            d={currentPath}
+            stroke={strokeColor}
+            strokeWidth={strokeWidth}
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        ) : null}
+      </Svg>
       {elements
         .filter(e => e.type === 'image')
         .map((img, i) => (
@@ -401,31 +429,6 @@ export default function DrawingCanvas({
             </Text>
           )
         ))}
-      <Svg style={{ position: 'absolute', width: canvasSize, height: canvasSize }}>
-        {elements
-          .filter(e => e.type === 'path')
-          .map((p, i) => (
-            <Path
-              key={`path-${i}`}
-              d={p.d}
-              stroke={p.color}
-              strokeWidth={p.width ?? strokeWidth}
-              fill="none"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          ))}
-        {currentPath ? (
-          <Path
-            d={currentPath}
-            stroke={strokeColor}
-            strokeWidth={strokeWidth}
-            fill="none"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        ) : null}
-      </Svg>
     </View>
   );
 }

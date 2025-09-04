@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, PanResponder, Image } from 'react-native';
+import { View, PanResponder, Image, Text, Alert } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { line as d3Line, curveBasis } from 'd3-shape';
 
@@ -11,7 +11,8 @@ export type DrawingElement =
       width?: number;
       points?: { x: number; y: number }[];
     }
-  | { type: 'image'; uri: string; x: number; y: number; width: number; height: number };
+  | { type: 'image'; uri: string; x: number; y: number; width: number; height: number }
+  | { type: 'text'; text: string; x: number; y: number; color: string; fontSize?: number };
 
 interface DrawingCanvasProps {
   elements: DrawingElement[];
@@ -21,6 +22,7 @@ interface DrawingCanvasProps {
   editable?: boolean;
   canvasSize?: number;
   eraser?: boolean;
+  textMode?: boolean;
 }
 
 export default function DrawingCanvas({
@@ -31,6 +33,7 @@ export default function DrawingCanvas({
   editable = true,
   canvasSize = 2000,
   eraser = false,
+  textMode = false,
 }: DrawingCanvasProps) {
   const [currentPath, setCurrentPath] = useState('');
   const pointsRef = useRef<{ x: number; y: number }[]>([]);
@@ -39,6 +42,7 @@ export default function DrawingCanvas({
   const eraserRef = useRef(eraser);
   const selectedImageRef = useRef<number | null>(null);
   const dragOffset = useRef({ x: 0, y: 0 });
+  const textModeRef = useRef(textMode);
 
   useEffect(() => {
     strokeColorRef.current = strokeColor;
@@ -51,6 +55,10 @@ export default function DrawingCanvas({
   useEffect(() => {
     eraserRef.current = eraser;
   }, [eraser]);
+
+  useEffect(() => {
+    textModeRef.current = textMode;
+  }, [textMode]);
 
   const lineGenerator = useRef(
     d3Line<{ x: number; y: number }>()
@@ -84,6 +92,25 @@ export default function DrawingCanvas({
       onPanResponderGrant: evt => {
         if (!editable) return;
         const { locationX, locationY } = evt.nativeEvent;
+        if (textModeRef.current) {
+          if (setElements) {
+            Alert.prompt('Add Text', 'Enter text', input => {
+              if (input) {
+                setElements(prev => [
+                  ...prev,
+                  {
+                    type: 'text',
+                    text: input,
+                    x: locationX,
+                    y: locationY,
+                    color: strokeColorRef.current,
+                  },
+                ]);
+              }
+            });
+          }
+          return;
+        }
         if (eraserRef.current) {
           eraseAtPoint(locationX, locationY);
           return;
@@ -108,6 +135,7 @@ export default function DrawingCanvas({
       onPanResponderMove: evt => {
         if (!editable) return;
         const { locationX, locationY } = evt.nativeEvent;
+        if (textModeRef.current) return;
         if (eraserRef.current) {
           eraseAtPoint(locationX, locationY);
           return;
@@ -132,7 +160,7 @@ export default function DrawingCanvas({
       },
       onPanResponderRelease: () => {
         if (!editable) return;
-        if (eraserRef.current) return;
+        if (textModeRef.current || eraserRef.current) return;
         if (selectedImageRef.current !== null) {
           selectedImageRef.current = null;
           return;
@@ -176,6 +204,22 @@ export default function DrawingCanvas({
               height: img.height,
             }}
           />
+        ))}
+      {elements
+        .filter(e => e.type === 'text')
+        .map((t, i) => (
+          <Text
+            key={`text-${i}`}
+            style={{
+              position: 'absolute',
+              left: t.x,
+              top: t.y,
+              color: t.color,
+              fontSize: t.fontSize ?? 16,
+            }}
+          >
+            {t.text}
+          </Text>
         ))}
       <Svg style={{ position: 'absolute', width: canvasSize, height: canvasSize }}>
         {elements

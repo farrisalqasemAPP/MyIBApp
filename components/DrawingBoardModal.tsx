@@ -20,7 +20,20 @@ export default function DrawingBoardModal({
   const [color, setColor] = useState('#000000');
   const [eraser, setEraser] = useState(false);
   const [strokeWidth, setStrokeWidth] = useState(4);
-  const COLORS = ['#000000', '#ff0000', '#0000ff', '#008000'];
+  const [textMode, setTextMode] = useState(false);
+  const [showColors, setShowColors] = useState(false);
+  const [showSizes, setShowSizes] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+  const COLORS = [
+    '#000000',
+    '#ff0000',
+    '#0000ff',
+    '#008000',
+    '#ffff00',
+    '#ff00ff',
+    '#ffa500',
+    '#00ffff',
+  ];
   const SIZES = [4, 8, 12, 16];
   const canvasSize = 2000;
 
@@ -47,7 +60,16 @@ export default function DrawingBoardModal({
 
   return (
     <Modal visible={visible} animationType="slide">
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, backgroundColor: darkMode ? '#000' : '#fff' }}>
+        <View style={styles.modeToggle}>
+          <TouchableOpacity onPress={() => setDarkMode(m => !m)}>
+            <Ionicons
+              name={darkMode ? 'sunny' : 'moon'}
+              size={24}
+              color={darkMode ? '#fff' : '#000'}
+            />
+          </TouchableOpacity>
+        </View>
         <ScrollView
           horizontal
           bounces={false}
@@ -64,10 +86,48 @@ export default function DrawingBoardModal({
               strokeWidth={strokeWidth}
               canvasSize={canvasSize}
               eraser={eraser}
+              textMode={textMode}
             />
           </ScrollView>
         </ScrollView>
-        <View style={styles.toolbar}>
+        <View
+          style={[
+            styles.toolbar,
+            { backgroundColor: darkMode ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.6)' },
+          ]}
+        >
+          <TouchableOpacity onPress={() => setShowColors(s => !s)}>
+            <Ionicons name="color-palette" size={24} color={darkMode ? '#fff' : '#000'} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowSizes(s => !s)}>
+            <Ionicons
+              name={showSizes ? 'chevron-down' : 'chevron-up'}
+              size={24}
+              color={darkMode ? '#fff' : '#000'}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setTextMode(t => !t)}>
+            <Ionicons
+              name="text"
+              size={24}
+              color={textMode ? '#ffd700' : darkMode ? '#fff' : '#000'}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setEraser(e => !e)}>
+            {eraser ? (
+              <Ionicons name="pencil" size={24} color={darkMode ? '#fff' : '#000'} />
+            ) : (
+              <FontAwesome name="eraser" size={24} color={darkMode ? '#fff' : '#000'} />
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity onPress={pickImage}>
+            <Ionicons name="image" size={24} color={darkMode ? '#fff' : '#000'} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={onClose}>
+            <Ionicons name="checkmark" size={24} color={darkMode ? '#fff' : '#000'} />
+          </TouchableOpacity>
+        </View>
+        {showColors && (
           <View style={styles.colorPalette}>
             {COLORS.map(c => (
               <TouchableOpacity
@@ -79,10 +139,15 @@ export default function DrawingBoardModal({
                     borderColor: c === color ? '#fff' : 'transparent',
                   },
                 ]}
-                onPress={() => setColor(c)}
+                onPress={() => {
+                  setColor(c);
+                  setShowColors(false);
+                }}
               />
             ))}
           </View>
+        )}
+        {showSizes && (
           <View style={styles.sizePalette}>
             {SIZES.map(s => (
               <TouchableOpacity
@@ -93,28 +158,17 @@ export default function DrawingBoardModal({
                     width: s,
                     height: s,
                     borderRadius: s / 2,
-                    backgroundColor: '#fff',
                     borderColor: s === strokeWidth ? '#fff' : 'transparent',
                   },
                 ]}
-                onPress={() => setStrokeWidth(s)}
+                onPress={() => {
+                  setStrokeWidth(s);
+                  setShowSizes(false);
+                }}
               />
             ))}
           </View>
-          <TouchableOpacity onPress={() => setEraser(e => !e)}>
-            {eraser ? (
-              <Ionicons name="pencil" size={24} color="#fff" />
-            ) : (
-              <FontAwesome name="eraser" size={24} color="#fff" />
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity onPress={pickImage}>
-            <Ionicons name="image" size={24} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={onClose}>
-            <Ionicons name="checkmark" size={24} color="#fff" />
-          </TouchableOpacity>
-        </View>
+        )}
       </View>
     </Modal>
   );
@@ -130,17 +184,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-around',
     padding: 10,
-    backgroundColor: 'rgba(0,0,0,0.6)',
   },
   colorPalette: {
+    position: 'absolute',
+    bottom: 60,
+    left: 10,
     flexDirection: 'row',
   },
   sizePalette: {
-    flexDirection: 'row',
+    position: 'absolute',
+    bottom: 60,
+    right: 10,
+    flexDirection: 'column',
+    alignItems: 'center',
   },
   sizeSwatch: {
-    marginHorizontal: 4,
+    marginVertical: 4,
     borderWidth: 2,
+    backgroundColor: '#fff',
   },
   colorSwatch: {
     width: 30,
@@ -148,5 +209,11 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     marginHorizontal: 4,
     borderWidth: 2,
+  },
+  modeToggle: {
+    position: 'absolute',
+    top: 40,
+    right: 10,
+    zIndex: 10,
   },
 });

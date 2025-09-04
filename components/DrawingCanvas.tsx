@@ -36,6 +36,7 @@ export default function DrawingCanvas({
   const pointsRef = useRef<{ x: number; y: number }[]>([]);
   const strokeColorRef = useRef(strokeColor);
   const strokeWidthRef = useRef(strokeWidth);
+  const eraserRef = useRef(eraser);
   const selectedImageRef = useRef<number | null>(null);
   const dragOffset = useRef({ x: 0, y: 0 });
 
@@ -46,6 +47,10 @@ export default function DrawingCanvas({
   useEffect(() => {
     strokeWidthRef.current = strokeWidth;
   }, [strokeWidth]);
+
+  useEffect(() => {
+    eraserRef.current = eraser;
+  }, [eraser]);
 
   const lineGenerator = useRef(
     d3Line<{ x: number; y: number }>()
@@ -79,7 +84,7 @@ export default function DrawingCanvas({
       onPanResponderGrant: evt => {
         if (!editable) return;
         const { locationX, locationY } = evt.nativeEvent;
-        if (eraser) {
+        if (eraserRef.current) {
           eraseAtPoint(locationX, locationY);
           return;
         }
@@ -103,7 +108,7 @@ export default function DrawingCanvas({
       onPanResponderMove: evt => {
         if (!editable) return;
         const { locationX, locationY } = evt.nativeEvent;
-        if (eraser) {
+        if (eraserRef.current) {
           eraseAtPoint(locationX, locationY);
           return;
         }
@@ -127,7 +132,7 @@ export default function DrawingCanvas({
       },
       onPanResponderRelease: () => {
         if (!editable) return;
-        if (eraser) return;
+        if (eraserRef.current) return;
         if (selectedImageRef.current !== null) {
           selectedImageRef.current = null;
           return;

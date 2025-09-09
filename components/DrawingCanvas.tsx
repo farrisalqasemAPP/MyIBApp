@@ -1,5 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, PanResponder, Image, Text, TextInput } from 'react-native';
+import {
+  View,
+  PanResponder,
+  Image,
+  Text,
+  TextInput,
+  StyleProp,
+  ViewStyle,
+} from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { line as d3Line, curveBasis } from 'd3-shape';
 
@@ -33,6 +41,8 @@ interface DrawingCanvasProps {
   eraser?: boolean;
   textMode?: boolean;
   editMode?: boolean;
+  style?: StyleProp<ViewStyle>;
+  pointerEvents?: 'auto' | 'none' | 'box-none' | 'box-only';
 }
 
 export default function DrawingCanvas({
@@ -45,6 +55,8 @@ export default function DrawingCanvas({
   eraser = false,
   textMode = false,
   editMode = false,
+  style,
+  pointerEvents,
 }: DrawingCanvasProps) {
   const [currentPath, setCurrentPath] = useState('');
   const pointsRef = useRef<{ x: number; y: number }[]>([]);
@@ -315,8 +327,9 @@ export default function DrawingCanvas({
 
   return (
     <View
-      style={{ width: canvasSize, height: canvasSize }}
       {...panResponder.panHandlers}
+      pointerEvents={pointerEvents}
+      style={[{ width: canvasSize, height: canvasSize }, style]}
     >
       <Svg
         pointerEvents="none"

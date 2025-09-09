@@ -130,6 +130,7 @@ export default function NotesScreen() {
     });
     setDraftTitle('');
     setDraftContent('');
+    richText.current?.setContentHTML('');
     setTextColor('#000000');
     richText.current?.setForeColor('#000000');
   };
@@ -156,6 +157,7 @@ export default function NotesScreen() {
       setDrawingModalVisible(true);
     } else {
       setDraftContent(note.content);
+      richText.current?.setContentHTML(note.content);
       setTextColor('#000000');
       richText.current?.setForeColor('#000000');
     }
@@ -180,6 +182,7 @@ export default function NotesScreen() {
     setEditingNote(null);
     setDraftTitle('');
     setDraftContent('');
+    richText.current?.setContentHTML('');
     setDrawingElements([]);
     setDrawingModalVisible(false);
   };
@@ -188,6 +191,7 @@ export default function NotesScreen() {
     setEditingNote(null);
     setDraftTitle('');
     setDraftContent('');
+    richText.current?.setContentHTML('');
     setDrawingElements([]);
     setTextColor('#000000');
     setDrawingModalVisible(false);
@@ -476,7 +480,6 @@ export default function NotesScreen() {
             />
             <RichEditor
               ref={richText}
-              initialContentHTML={draftContent}
               onChange={setDraftContent}
               placeholder="Start writing..."
               editorStyle={{ color: textColor }}
